@@ -202,7 +202,12 @@ public class Config
         ItemValueRegistry.onConfigReloaded();
     }
 
-    static void applyRuntimeValues(
+    public static void saveCommonConfig()
+    {
+        SPEC.save();
+    }
+
+    public static void applyRuntimeValues(
       final int baseTicks,
       final int minTicks,
       final double ticksPerValue,
@@ -243,7 +248,7 @@ public class Config
     }
 
     @NotNull
-    static Map<Item, Integer> copyExplicitItemValues()
+    public static Map<Item, Integer> copyExplicitItemValues()
     {
         return new HashMap<>(explicitItemValues);
     }
