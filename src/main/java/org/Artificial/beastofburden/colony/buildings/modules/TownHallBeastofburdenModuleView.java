@@ -1,4 +1,4 @@
-package org.Artificial.beastofburden.client.gui;
+package org.Artificial.beastofburden.colony.buildings.modules;
 
 import com.ldtteam.blockui.views.BOWindow;
 import com.minecolonies.api.colony.ICitizenDataView;
@@ -8,7 +8,7 @@ import com.minecolonies.core.colony.buildings.moduleviews.WorkerBuildingModuleVi
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import org.Artificial.beastofburden.colony.buildings.modules.TownHallBeastofburdenModule;
+import org.Artificial.beastofburden.client.gui.BeastofburdenModuleWindow;
 import org.Artificial.beastofburden.colony.jobs.BeastofburdenJobs;
 import org.Artificial.beastofburden.colony.work.BeastWorkSnapshot;
 import org.jetbrains.annotations.NotNull;
