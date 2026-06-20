@@ -1,0 +1,19 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "org.Artificial.beastofburden.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "beastofburden.refmap.json",
+  "mixins": [
+  ],
+  "client": [
+    "client.AbstractBuildingWindowAccessor",
+    "client.AbstractWindowTownHallMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}
