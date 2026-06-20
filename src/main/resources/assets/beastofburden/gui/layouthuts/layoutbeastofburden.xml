@@ -1,0 +1,43 @@
+<window size="190 300" pause="false" lightbox="false">
+    <image source="minecolonies:textures/gui/builderhut/builder_paper.png" size="190 300"/>
+    <label size="164 11" pos="13 14" textalign="MIDDLE" color="black"
+           label="$(com.beastofburden.gui.townhall.workers)"/>
+
+    <list id="workers" size="164 24" pos="13 25">
+        <view size="100% 11">
+            <box size="100% 11" linewidth="0">
+                <label id="workerName" size="100% 11" pos="0 0" textalign="MIDDLE" color="black"/>
+            </box>
+        </view>
+    </list>
+
+    <buttonimage id="hire" size="129 17" pos="30 52" textcolor="black"
+                 source="minecolonies:textures/gui/builderhut/builder_button_medium_large.png"
+                 label="$(com.minecolonies.coremod.gui.workerhuts.manage)"/>
+    <buttonimage id="recall" size="129 17" pos="30 70" textcolor="black"
+                 source="minecolonies:textures/gui/builderhut/builder_button_medium_large.png"
+                 label="$(com.minecolonies.coremod.gui.workerhuts.recall)"/>
+
+    <label id="activeTitle" size="164 11" pos="13 92" textalign="MIDDLE" color="black"
+           label="$(com.beastofburden.gui.townhall.active_work)"/>
+    <list id="activeWork" size="164 48" pos="13 103">
+        <view size="100% 22">
+            <box size="100% 22" linewidth="0">
+                <label id="activeLine" size="100% 11" pos="0 0" textalign="MIDDLE" color="black"/>
+                <gradient id="activeProgress" size="0 4" pos="0 14" gradientstart="4283215696" gradientend="4283215696"/>
+                <label id="activeTime" size="100% 8" pos="0 18" textalign="MIDDLE" color="black"/>
+            </box>
+        </view>
+    </list>
+
+    <label id="historyTitle" size="164 11" pos="13 155" textalign="MIDDLE" color="black"
+           label="$(com.beastofburden.gui.townhall.work_history)"/>
+    <label id="historyNote" size="164 9" pos="13 166" textalign="MIDDLE" color="black"/>
+    <list id="history" size="164 108" pos="13 177">
+        <view size="100% 11">
+            <box size="100% 11" linewidth="0">
+                <label id="historyLine" size="100% 11" pos="0 0" textalign="MIDDLE" color="black"/>
+            </box>
+        </view>
+    </list>
+</window>
