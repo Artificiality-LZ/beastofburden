@@ -38,27 +38,17 @@ public final class ColonyLogistics
 
     public static boolean hasWarehouse(@NotNull final IColony colony)
     {
+        if (!ColonyBuildings.getWarehouses(colony).isEmpty())
+        {
+            return true;
+        }
+
         return anyKnownBuildingMatches(colony, IWareHouse.class::isInstance);
     }
 
     public static boolean hasActiveDeliveryman(@NotNull final IColony colony)
     {
-        try
-        {
-            for (final IBuilding building : collectKnownBuildings(colony))
-            {
-                if (building instanceof IBuildingDeliveryman && !building.getAllAssignedCitizen().isEmpty())
-                {
-                    return true;
-                }
-            }
-        }
-        catch (final Exception ex)
-        {
-            BeastofBurdenLog.warn("Failed to check deliveryman for colony {}: {}", colony.getID(), ex.toString());
-        }
-
-        return false;
+        return ColonyBuildings.hasActiveDeliveryman(colony);
     }
 
     public static int countAllOpenRequests(@NotNull final IColony colony)

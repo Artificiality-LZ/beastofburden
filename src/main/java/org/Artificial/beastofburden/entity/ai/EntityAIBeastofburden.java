@@ -254,7 +254,9 @@ public class EntityAIBeastofburden extends AbstractAISkeleton<JobBeastofburden>
         final IColony colony = job.getColony();
         if (!RequestItemUtils.isStillFulfillable(colony, request))
         {
-            generationTask.completeDelivery();
+            BeastofBurdenLog.info("Citizen {} aborted delivery: request no longer needed.", job.getCitizen().getId());
+            BeastWorkSync.onCancelled(job, stack);
+            generationTask.cancel();
             updateWorkStatus(false);
             return IDLE;
         }

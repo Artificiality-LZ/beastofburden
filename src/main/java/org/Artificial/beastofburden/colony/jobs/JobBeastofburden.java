@@ -26,10 +26,15 @@ public class JobBeastofburden extends AbstractJob<EntityAIBeastofburden, JobBeas
         return new EntityAIBeastofburden(this);
     }
 
+    /**
+     * Use the plain settler model instead of {@link ModModelTypes#CITIZEN_ID}.
+     * The citizen model adds job-unrelated cosmetics (sailor hat, dress, etc.) that clip badly
+     * when no dedicated beast-of-burden model is registered.
+     */
     @NotNull
     @Override
     public ResourceLocation getModel()
     {
-        return ModModelTypes.CITIZEN_ID;
+        return ModModelTypes.SETTLER_ID;
     }
 }

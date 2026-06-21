@@ -21,11 +21,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Detects colony requests that the colony cannot fulfill on its own.
- * <p>
- * Uses MineColonies stuck-request semantics (player / retrying resolver), and also treats
- * open citizen deliverable requests as candidates — important in early game when there is
- * no warehouse or deliveryman yet.
+ * Detects colony requests that only a beast of burden should handle:
+ * stuck on the player/retrying resolver and not supplyable by colony logistics.
  */
 public final class UnfulfillableRequestDetector
 {
@@ -34,7 +31,7 @@ public final class UnfulfillableRequestDetector
     }
 
     /**
-     * Collects candidate requests using only the public MineColonies API.
+     * Collects candidate requests assigned to stuck resolvers.
      */
     @NotNull
     public static Collection<IRequest<?>> getAllRequests(@NotNull final IColony colony)
@@ -52,13 +49,16 @@ public final class UnfulfillableRequestDetector
             collectChildren(manager, request, seen, result);
         }
 
-        ColonyLogistics.collectOpenRequests(colony, seen, result);
+        if (ColonyLogistics.isEarlyLogistics(colony))
+        {
+            ColonyLogistics.collectOpenRequests(colony, seen, result);
+        }
 
         return result;
     }
 
     /**
-     * @return {@code true} when the request is an active item request that the beast of burden should handle.
+     * @return {@code true} when the request is stuck and the colony cannot supply it on its own.
      */
     public static boolean isUnfulfillable(@NotNull final IColony colony, @Nullable final IRequest<?> request)
     {
@@ -76,22 +76,16 @@ public final class UnfulfillableRequestDetector
         final List<IToken<?>> playerRequests = manager.getPlayerResolver().getAllAssignedRequests();
         final List<IToken<?>> retryingRequests = manager.getRetryingRequestResolver().getAllAssignedRequests();
 
-        if (isRequestStuck(request, playerRequests, retryingRequests, manager))
-        {
-            return true;
-        }
-
-        if (isResolvedByStuckResolver(manager, request))
-        {
-            return true;
-        }
-
-        if (!ColonyLogistics.isOpenOnAnyBuilding(colony, request))
+        final boolean stuck = isRequestStuck(request, playerRequests, retryingRequests, manager)
+          || isResolvedByStuckResolver(manager, request);
+        final boolean earlyOpenRequest = ColonyLogistics.isEarlyLogistics(colony)
+          && ColonyLogistics.isOpenOnAnyBuilding(colony, request);
+        if (!stuck && !earlyOpenRequest)
         {
             return false;
         }
 
-        return ColonyLogistics.isEarlyLogistics(colony);
+        return !ColonySupplyChecker.canColonySupply(colony, request);
     }
 
     /**
@@ -113,8 +107,8 @@ public final class UnfulfillableRequestDetector
         sb.append(" active=").append(isActiveItemRequest(request));
         sb.append(" stuck=").append(isRequestStuck(request, playerRequests, retryingRequests, manager));
         sb.append(" stuckResolver=").append(isResolvedByStuckResolver(manager, request));
-        sb.append(" openBuilding=").append(ColonyLogistics.isOpenOnAnyBuilding(colony, request));
-        sb.append(" earlyLogistics=").append(ColonyLogistics.isEarlyLogistics(colony));
+        sb.append(" earlyOpen=").append(ColonyLogistics.isEarlyLogistics(colony) && ColonyLogistics.isOpenOnAnyBuilding(colony, request));
+        sb.append(" colonyCanSupply=").append(ColonySupplyChecker.canColonySupply(colony, request));
         sb.append(" warehouse=").append(ColonyLogistics.hasWarehouse(colony));
         sb.append(" deliveryman=").append(ColonyLogistics.hasActiveDeliveryman(colony));
         sb.append(" inPlayer=").append(playerRequests.contains(request.getId()));

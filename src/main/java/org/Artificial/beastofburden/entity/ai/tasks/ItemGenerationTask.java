@@ -88,6 +88,13 @@ public class ItemGenerationTask
             return false;
         }
 
+        if (!RequestItemUtils.isStillFulfillable(job.getColony(), currentRequest))
+        {
+            BeastofBurdenLog.info("Generation cancelled: request is no longer needed.");
+            cancel();
+            return false;
+        }
+
         progressTicks++;
         if (progressTicks % 20 == 0)
         {
@@ -107,6 +114,13 @@ public class ItemGenerationTask
     {
         if (currentRequest == null || ItemStackUtils.isEmpty(generatedStack))
         {
+            cancel();
+            return;
+        }
+
+        if (!RequestItemUtils.isStillFulfillable(job.getColony(), currentRequest))
+        {
+            BeastofBurdenLog.info("Generation finished but request was already fulfilled; discarding items.");
             cancel();
             return;
         }
