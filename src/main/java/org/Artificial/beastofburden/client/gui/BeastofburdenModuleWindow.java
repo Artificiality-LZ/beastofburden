@@ -1,11 +1,13 @@
 package org.Artificial.beastofburden.client.gui;
 
 import com.ldtteam.blockui.Pane;
+import com.ldtteam.blockui.controls.Button;
 import com.ldtteam.blockui.controls.Gradient;
+import com.ldtteam.blockui.controls.ItemIcon;
 import com.ldtteam.blockui.controls.Text;
 import com.ldtteam.blockui.views.ScrollingList;
-import com.minecolonies.api.util.constant.Constants;
 import com.minecolonies.core.Network;
+import com.minecolonies.core.client.gui.WindowHireWorker;
 import com.minecolonies.core.client.gui.modules.building.SpecialAssignmentModuleWindow;
 import com.minecolonies.core.network.messages.server.colony.building.MarkBuildingDirtyMessage;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -36,10 +38,15 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
     private static final String LIST_ACTIVE = "activeWork";
     private static final String LIST_HISTORY = "history";
     private static final String LABEL_ACTIVE = "activeLine";
-    private static final String LABEL_ACTIVE_TIME = "activeTime";
+    private static final String LABEL_ACTIVE_ITEM = "activeItem";
+    private static final String ICON_ACTIVE = "activeIcon";
     private static final String GRADIENT_ACTIVE = "activeProgress";
-    private static final String LABEL_HISTORY = "historyLine";
+    private static final String LABEL_HISTORY_META = "historyMeta";
+    private static final String LABEL_HISTORY_ITEM = "historyItem";
+    private static final String ICON_HISTORY = "historyIcon";
     private static final String LABEL_HISTORY_NOTE = "historyNote";
+
+    private static final String BUTTON_HIRE = "hire";
 
     private final TownHallBeastofburdenModuleView moduleView;
     private int refreshCooldown = 20;
@@ -48,11 +55,22 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
     {
         super(moduleView, WINDOW_LAYOUT);
         this.moduleView = moduleView;
+        registerButton(BUTTON_HIRE, this::hireClicked);
+    }
+
+    /**
+     * Allow hiring beasts while the Town Hall is still under construction (level 0).
+     */
+    @Override
+    protected void hireClicked(@NotNull final Button button)
+    {
+        new WindowHireWorker(buildingView.getColony(), buildingView.getPosition()).open();
     }
 
     @Override
     public void onOpened()
     {
+        registerButton(BUTTON_HIRE, this::hireClicked);
         super.onOpened();
         refreshWorkPanels();
     }
@@ -119,43 +137,71 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
             public void updateElement(final int index, @NotNull final Pane rowPane)
             {
                 final Text line = rowPane.findPaneOfTypeByID(LABEL_ACTIVE, Text.class);
-                final Text time = rowPane.findPaneOfTypeByID(LABEL_ACTIVE_TIME, Text.class);
+                final Text itemLine = rowPane.findPaneOfTypeByID(LABEL_ACTIVE_ITEM, Text.class);
+                final ItemIcon icon = rowPane.findPaneOfTypeByID(ICON_ACTIVE, ItemIcon.class);
                 final Gradient progress = rowPane.findPaneOfTypeByID(GRADIENT_ACTIVE, Gradient.class);
-                if (line == null || time == null || progress == null)
+                if (line == null || itemLine == null || progress == null)
                 {
                     return;
                 }
 
                 if (rows.isEmpty())
                 {
+                    if (icon != null)
+                    {
+                        icon.setVisible(false);
+                    }
                     line.setText(Component.translatable("com.beastofburden.gui.townhall.no_workers"));
-                    time.setText(Component.empty());
+                    itemLine.setText(Component.empty());
                     progress.setSize(0, progress.getHeight());
                     return;
                 }
 
                 final BeastWorkStatus status = rows.get(index);
-                line.setText(formatActiveLine(status));
+                line.setText(formatActiveMeta(status));
+
+                if (status.getPhase() == BeastWorkPhase.IDLE)
+                {
+                    if (icon != null)
+                    {
+                        icon.setVisible(false);
+                    }
+                    itemLine.setText(Component.translatable("com.beastofburden.gui.townhall.idle"));
+                    progress.setSize(0, progress.getHeight());
+                    return;
+                }
+
+                final ItemStack stack = itemStack(status.getItemId(), status.getCount());
+                if (icon != null)
+                {
+                    icon.setVisible(true);
+                    icon.setItem(stack);
+                }
+                itemLine.setText(formatItemLine(stack, status.getCount()));
 
                 if (status.getPhase() == BeastWorkPhase.GENERATING && status.getRequiredTicks() > 0)
                 {
                     final float percent = status.getProgressPercent();
-                    progress.setSize((int) (rowPane.getWidth() * percent), progress.getHeight());
-                    time.setText(Component.translatable(
-                      "com.beastofburden.gui.townhall.progress_time",
+                    progress.setSize((int) (142 * percent), progress.getHeight());
+                    line.setText(Component.translatable(
+                      "com.beastofburden.gui.townhall.active_meta_progress",
+                      status.getCitizenName(),
+                      Component.translatable("com.beastofburden.gui.townhall.phase." + status.getPhase().name().toLowerCase(Locale.ROOT)),
                       formatSeconds(status.getProgressTicks()),
                       formatSeconds(status.getRequiredTicks())
                     ));
                 }
                 else if (status.getPhase() == BeastWorkPhase.DELIVERING)
                 {
-                    progress.setSize(rowPane.getWidth(), progress.getHeight());
-                    time.setText(Component.translatable("com.beastofburden.gui.townhall.delivering"));
+                    progress.setSize(142, progress.getHeight());
+                    itemLine.setText(Component.translatable(
+                      "com.beastofburden.gui.townhall.delivering_item",
+                      formatItemLine(stack, status.getCount())
+                    ));
                 }
                 else
                 {
                     progress.setSize(0, progress.getHeight());
-                    time.setText(Component.translatable("com.beastofburden.gui.townhall.idle"));
                 }
             }
         });
@@ -180,57 +226,95 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
             @Override
             public void updateElement(final int index, @NotNull final Pane rowPane)
             {
-                final Text line = rowPane.findPaneOfTypeByID(LABEL_HISTORY, Text.class);
-                if (line == null)
+                final Text meta = rowPane.findPaneOfTypeByID(LABEL_HISTORY_META, Text.class);
+                final Text itemLine = rowPane.findPaneOfTypeByID(LABEL_HISTORY_ITEM, Text.class);
+                final ItemIcon icon = rowPane.findPaneOfTypeByID(ICON_HISTORY, ItemIcon.class);
+                if (meta == null || itemLine == null)
                 {
                     return;
                 }
 
                 if (history.isEmpty())
                 {
-                    line.setText(Component.translatable("com.beastofburden.gui.townhall.no_history"));
+                    if (icon != null)
+                    {
+                        icon.setVisible(false);
+                    }
+                    meta.setText(Component.translatable("com.beastofburden.gui.townhall.no_history"));
+                    itemLine.setText(Component.empty());
                     return;
                 }
 
-                line.setText(formatHistoryLine(history.get(index)));
+                final BeastWorkLogEntry entry = history.get(index);
+                final ItemStack stack = itemStack(entry.getItemId(), entry.getCount());
+                if (icon != null)
+                {
+                    icon.setVisible(true);
+                    icon.setItem(stack);
+                }
+
+                meta.setText(formatHistoryMeta(entry));
+                itemLine.setText(formatHistoryItem(entry, stack));
             }
         });
     }
 
     @NotNull
-    private Component formatActiveLine(@NotNull final BeastWorkStatus status)
+    private Component formatActiveMeta(@NotNull final BeastWorkStatus status)
     {
-        final ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(status.getItemId()), status.getCount());
-        final String itemName = status.getPhase() == BeastWorkPhase.IDLE
-          ? "-"
-          : stack.getHoverName().getString() + " x" + status.getCount();
-
         return Component.translatable(
-          "com.beastofburden.gui.townhall.active_line",
+          "com.beastofburden.gui.townhall.active_meta",
           status.getCitizenName(),
-          Component.translatable("com.beastofburden.gui.townhall.phase." + status.getPhase().name().toLowerCase(Locale.ROOT)),
-          itemName
+          Component.translatable("com.beastofburden.gui.townhall.phase." + status.getPhase().name().toLowerCase(Locale.ROOT))
         );
     }
 
     @NotNull
-    private Component formatHistoryLine(@NotNull final BeastWorkLogEntry entry)
+    private Component formatHistoryMeta(@NotNull final BeastWorkLogEntry entry)
     {
-        final ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(entry.getItemId()), entry.getCount());
         final String actionKey = "com.beastofburden.gui.townhall.action." + entry.getAction().name().toLowerCase(Locale.ROOT);
-        final String duration = entry.getAction() == BeastWorkLogAction.DELIVERED && entry.getDurationTicks() > 0
-          ? formatSeconds(entry.getDurationTicks())
-          : "-";
-
         return Component.translatable(
-          "com.beastofburden.gui.townhall.history_line",
+          "com.beastofburden.gui.townhall.history_meta",
           entry.getColonyDay(),
           entry.getCitizenName(),
-          Component.translatable(actionKey),
-          stack.getHoverName().getString(),
-          entry.getCount(),
-          duration
+          Component.translatable(actionKey)
         );
+    }
+
+    @NotNull
+    private Component formatHistoryItem(@NotNull final BeastWorkLogEntry entry, @NotNull final ItemStack stack)
+    {
+        if (entry.getAction() == BeastWorkLogAction.DELIVERED && entry.getDurationTicks() > 0)
+        {
+            return Component.translatable(
+              "com.beastofburden.gui.townhall.history_item_timed",
+              stack.getHoverName(),
+              entry.getCount(),
+              formatSeconds(entry.getDurationTicks())
+            );
+        }
+
+        return Component.translatable(
+          "com.beastofburden.gui.townhall.history_item",
+          stack.getHoverName(),
+          entry.getCount()
+        );
+    }
+
+    @NotNull
+    private static Component formatItemLine(@NotNull final ItemStack stack, final int count)
+    {
+        return Component.translatable(
+          "com.beastofburden.gui.townhall.item_count",
+          stack.getHoverName(),
+          count
+        );
+    }
+
+    @NotNull
+    private static ItemStack itemStack(@NotNull final ResourceLocation itemId, final int count)
+    {
+        return new ItemStack(BuiltInRegistries.ITEM.get(itemId), Math.max(1, count));
     }
 
     @NotNull

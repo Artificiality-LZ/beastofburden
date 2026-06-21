@@ -21,6 +21,7 @@ import org.Artificial.beastofburden.colony.jobs.JobBeastofburden;
 import org.Artificial.beastofburden.colony.work.BeastWorkLogEntry;
 import org.Artificial.beastofburden.colony.work.BeastWorkSnapshot;
 import org.Artificial.beastofburden.colony.work.BeastWorkStatus;
+import com.minecolonies.core.util.BuildingUtils;
 import org.Artificial.beastofburden.util.BeastofBurdenAiDriver;
 import org.jetbrains.annotations.NotNull;
 
@@ -109,7 +110,7 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
         // Like the builder hut: hire and work while the TownHall is still under construction.
         if (!isFull()
               && (!building.isBuilt() || building.getBuildingLevel() > 0)
-              && getHiringMode() == HiringMode.AUTO)
+              && BuildingUtils.canAutoHire(building, getHiringMode(), getJobEntry()))
         {
             final ICitizenData joblessCitizen = colony.getCitizenManager().getJoblessCitizen();
             if (joblessCitizen != null)
