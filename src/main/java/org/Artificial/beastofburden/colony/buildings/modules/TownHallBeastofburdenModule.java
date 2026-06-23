@@ -18,11 +18,16 @@ import net.minecraft.network.FriendlyByteBuf;
 import org.Artificial.beastofburden.Config;
 import org.Artificial.beastofburden.colony.jobs.BeastofburdenJobs;
 import org.Artificial.beastofburden.colony.jobs.JobBeastofburden;
+import org.Artificial.beastofburden.colony.planning.ColonyPlanner;
+import org.Artificial.beastofburden.colony.planning.ColonyPlannerDriver;
+import org.Artificial.beastofburden.colony.planning.ColonyPhase;
+import org.Artificial.beastofburden.colony.planning.PlanningMode;
 import org.Artificial.beastofburden.colony.work.BeastWorkLogEntry;
 import org.Artificial.beastofburden.colony.work.BeastWorkSnapshot;
 import org.Artificial.beastofburden.colony.work.BeastWorkStatus;
 import com.minecolonies.core.util.BuildingUtils;
 import org.Artificial.beastofburden.util.BeastofBurdenAiDriver;
+import org.Artificial.beastofburden.util.BeastWorkSync;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayDeque;
@@ -56,11 +61,18 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
     private static final Skill PRIMARY_SKILL = Skill.Strength;
     private static final Skill SECONDARY_SKILL = Skill.Adaptability;
     private static final String TAG_WORK_LOG = "workLog";
+    private static final String TAG_AUTONOMOUS_PLANNING = "autonomousPlanning";
+    private static final String TAG_PLANNER = "colonyPlanner";
 
     private final List<ICitizenData> assignedCitizens = Lists.newArrayList();
     private final Deque<BeastWorkLogEntry> workLog = new ArrayDeque<>();
     private final Map<Integer, BeastWorkStatus> activeWork = new HashMap<>();
+    private final ColonyPlanner colonyPlanner = new ColonyPlanner();
     private HiringMode hiringMode = HiringMode.DEFAULT;
+    private boolean autonomousPlanningEnabled;
+    private ColonyPhase syncedPhase;
+    private String syncedLastDecision = "";
+    private String syncedPlanningDetail = "";
 
     @NotNull
     @Override
@@ -107,6 +119,16 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
             }
         }
 
+        for (final ICitizenData citizen : getAssignedCitizen())
+        {
+            if (citizen.getJob() instanceof JobBeastofburden job)
+            {
+                BeastWorkSync.syncFromJob(job);
+            }
+        }
+
+        ColonyPlannerDriver.tick(this, colony);
+
         // Like the builder hut: hire and work while the TownHall is still under construction.
         if (!isFull()
               && (!building.isBuilt() || building.getBuildingLevel() > 0)
@@ -140,6 +162,7 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
         }
 
         assignedCitizens.add(citizen);
+        activeWork.put(citizen.getId(), BeastWorkStatus.idle(citizen.getId(), citizen.getName()));
         onAssignment(citizen);
         BeastofBurdenAiDriver.tickCitizen(citizen);
         markDirty();
@@ -155,6 +178,7 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
         }
 
         assignedCitizens.remove(citizen);
+        activeWork.remove(citizen.getId());
         markDirty();
         onRemoval(citizen);
         return true;
@@ -238,6 +262,84 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
         markDirty();
     }
 
+    public boolean isAutonomousPlanningEnabled()
+    {
+        return autonomousPlanningEnabled;
+    }
+
+    public void setPlanningMode(@NotNull final PlanningMode mode)
+    {
+        if (colonyPlanner.getPlanningMode() != mode)
+        {
+            colonyPlanner.setPlanningMode(mode);
+            markDirty();
+        }
+    }
+
+    @NotNull
+    public PlanningMode getPlanningMode()
+    {
+        return colonyPlanner.getPlanningMode();
+    }
+
+    public void cyclePlanningMode()
+    {
+        setPlanningMode(colonyPlanner.getPlanningMode().next());
+    }
+
+    public void setAutonomousPlanningEnabled(final boolean enabled)
+    {
+        if (autonomousPlanningEnabled != enabled)
+        {
+            autonomousPlanningEnabled = enabled;
+            markDirty();
+        }
+    }
+
+    @NotNull
+    public ColonyPlanner getColonyPlanner()
+    {
+        return colonyPlanner;
+    }
+
+    public void syncPlanningState(@NotNull final ColonyPlanner planner)
+    {
+        syncedPhase = planner.getCurrentPhaseOrDefault();
+        syncedLastDecision = resolveSyncedDecision(planner);
+        syncedPlanningDetail = planner.getReport().getDetail();
+        markDirty();
+    }
+
+    @NotNull
+    private static String resolveSyncedDecision(@NotNull final ColonyPlanner planner)
+    {
+        final String status = planner.getReport().getDecision();
+        final String last = planner.getLastDecision();
+        if (last != null && !last.isEmpty() && !"beast_busy".equals(last))
+        {
+            return last;
+        }
+
+        if (!status.isEmpty() && !"beast_busy".equals(status))
+        {
+            return status;
+        }
+
+        return last == null ? "" : last;
+    }
+
+    @NotNull
+    public ColonyPhase getSyncedPhase()
+    {
+        return syncedPhase == null ? ColonyPhase.P0_FOUNDATION : syncedPhase;
+    }
+
+    @NotNull
+    public String getSyncedLastDecision()
+    {
+        return syncedLastDecision;
+    }
+
     @NotNull
     private BeastWorkSnapshot createSnapshot()
     {
@@ -259,7 +361,19 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
             statuses.add(activeWork.getOrDefault(citizen.getId(), BeastWorkStatus.idle(citizen.getId(), citizen.getName())));
         }
 
-        return new BeastWorkSnapshot(currentDay, historyDays, statuses, visibleHistory);
+        return new BeastWorkSnapshot(
+          currentDay,
+          historyDays,
+          statuses,
+          visibleHistory,
+          autonomousPlanningEnabled,
+          colonyPlanner.getPlanningMode(),
+          colonyPlanner.getScriptedStrategy().getCurrentStepIndex(),
+          colonyPlanner.getScriptedStrategy().getStepCount(),
+          getSyncedPhase(),
+          syncedLastDecision,
+          syncedPlanningDetail
+        );
     }
 
     @Override
@@ -278,6 +392,24 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
             logTag.add(entry.save());
         }
         compound.put(TAG_WORK_LOG, logTag);
+        compound.putBoolean(TAG_AUTONOMOUS_PLANNING, autonomousPlanningEnabled);
+
+        final CompoundTag plannerTag = new CompoundTag();
+        plannerTag.putInt("phase", colonyPlanner.getPhaseId());
+        plannerTag.putInt("emergencyDays", colonyPlanner.getEmergencyDays());
+        plannerTag.putInt("recoveryDays", colonyPlanner.getRecoveryDays());
+        plannerTag.putInt("phaseCooldown", colonyPlanner.getPhaseCooldown());
+        plannerTag.putInt("retryCooldown", colonyPlanner.getRetryCooldown());
+        plannerTag.putInt("researchCooldown", colonyPlanner.getResearchCooldown());
+        plannerTag.putInt("planningMode", colonyPlanner.getPlanningMode().ordinal());
+        plannerTag.put("scripted", colonyPlanner.getScriptedStrategy().writeToNbt());
+        plannerTag.put("debug", colonyPlanner.writeDebugNbt());
+        final var world = building.getColony().getWorld();
+        if (world != null)
+        {
+            plannerTag.put("blocklist", colonyPlanner.writeBlocklistNbt(world.getGameTime()));
+        }
+        compound.put(TAG_PLANNER, plannerTag);
     }
 
     @Override
@@ -315,6 +447,28 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
                 workLog.add(BeastWorkLogEntry.load(logTag.getCompound(i)));
             }
         }
+
+        autonomousPlanningEnabled = compound.getBoolean(TAG_AUTONOMOUS_PLANNING);
+        if (compound.contains(TAG_PLANNER, Tag.TAG_COMPOUND))
+        {
+            final CompoundTag plannerTag = compound.getCompound(TAG_PLANNER);
+            final var world = building.getColony().getWorld();
+            colonyPlanner.readFromNbt(
+              plannerTag.getInt("phase"),
+              plannerTag.getInt("emergencyDays"),
+              plannerTag.getInt("recoveryDays"),
+              plannerTag.getInt("phaseCooldown"),
+              plannerTag.contains("retryCooldown") ? plannerTag.getInt("retryCooldown") : plannerTag.getInt("tacticalCooldown"),
+              plannerTag.contains("researchCooldown") ? plannerTag.getInt("researchCooldown") : 0,
+              plannerTag.contains("debug", Tag.TAG_COMPOUND) ? plannerTag.getCompound("debug") : null,
+              plannerTag.contains("blocklist", Tag.TAG_COMPOUND) ? plannerTag.getCompound("blocklist") : null,
+              world == null ? 0L : world.getGameTime(),
+              plannerTag.contains("planningMode") ? plannerTag.getInt("planningMode") : PlanningMode.HEURISTIC.ordinal(),
+              plannerTag.contains("scripted", Tag.TAG_COMPOUND) ? plannerTag.getCompound("scripted") : null
+            );
+            colonyPlanner.syncBootstrapState(building.getColony());
+            syncedPhase = ColonyPhase.fromId(plannerTag.getInt("phase"));
+        }
     }
 
     @Override
@@ -339,6 +493,7 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
         {
             BeastofBurdenAiDriver.tickCitizen(citizen);
             job.onLevelUp();
+            BeastWorkSync.syncFromJob(job);
         }
     }
 

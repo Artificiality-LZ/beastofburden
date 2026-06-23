@@ -7,7 +7,6 @@ import org.Artificial.beastofburden.colony.buildings.modules.TownHallBeastofburd
 import org.Artificial.beastofburden.colony.jobs.JobBeastofburden;
 import org.Artificial.beastofburden.colony.work.BeastWorkLogAction;
 import org.Artificial.beastofburden.colony.work.BeastWorkLogEntry;
-import org.Artificial.beastofburden.colony.work.BeastWorkPhase;
 import org.Artificial.beastofburden.colony.work.BeastWorkStatus;
 import org.Artificial.beastofburden.entity.ai.EntityAIBeastofburden;
 import org.Artificial.beastofburden.entity.ai.tasks.ItemGenerationTask;
@@ -42,23 +41,26 @@ public final class BeastWorkSync
         final ItemGenerationTask task = ai.getGenerationTask();
         if (task.isWorking())
         {
-            module.setActiveWork(BeastWorkStatus.generating(
+            final BeastWorkStatus status = BeastWorkStatus.generating(
               citizen.getId(),
               citizen.getName(),
               task.getGeneratedStack(),
               task.getProgressTicks(),
               task.getRequiredTicks()
-            ));
+            );
+            module.setActiveWork(status);
             return;
         }
 
         if (task.hasPendingDelivery())
         {
-            module.setActiveWork(BeastWorkStatus.delivering(citizen.getId(), citizen.getName(), task.getPendingDeliveryStack()));
+            final BeastWorkStatus status = BeastWorkStatus.delivering(citizen.getId(), citizen.getName(), task.getPendingDeliveryStack());
+            module.setActiveWork(status);
             return;
         }
 
-        module.setActiveWork(BeastWorkStatus.idle(citizen.getId(), citizen.getName()));
+        final BeastWorkStatus idle = BeastWorkStatus.idle(citizen.getId(), citizen.getName());
+        module.setActiveWork(idle);
     }
 
     public static void onGenerationStarted(@NotNull final JobBeastofburden job, @NotNull final ItemStack stack)
@@ -108,7 +110,12 @@ public final class BeastWorkSync
     public static void onCancelled(@NotNull final JobBeastofburden job, @NotNull final ItemStack stack)
     {
         final TownHallBeastofburdenModule module = getModule(job);
-        if (module != null && !stack.isEmpty())
+        if (module == null)
+        {
+            return;
+        }
+
+        if (!stack.isEmpty())
         {
             module.appendLog(new BeastWorkLogEntry(
               job.getColony().getDay(),
@@ -119,8 +126,9 @@ public final class BeastWorkSync
               stack.getCount(),
               0
             ));
-            syncFromJob(job);
         }
+
+        syncFromJob(job);
     }
 
     @Nullable

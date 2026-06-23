@@ -68,12 +68,25 @@ public class EntityAIBeastofburden extends AbstractAISkeleton<JobBeastofburden>
      */
     public boolean hasActiveWork()
     {
-        if (generationTask.isWorking() || generationTask.hasPendingDelivery())
+        if (isExecutingLogisticsWork())
         {
             return true;
         }
 
         return !ColonyRequestEventHandler.getQueue(job.getColony()).isEmpty();
+    }
+
+    /**
+     * @return true while the beast is actively generating or delivering (not merely queued).
+     */
+    public boolean isExecutingLogisticsWork()
+    {
+        if (generationTask.isWorking() || generationTask.hasPendingDelivery())
+        {
+            return true;
+        }
+
+        return ColonyRequestEventHandler.getQueue(job.getColony()).hasInFlight();
     }
 
     @Override

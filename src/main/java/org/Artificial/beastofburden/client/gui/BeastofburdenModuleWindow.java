@@ -15,7 +15,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import org.Artificial.beastofburden.Beastofburden;
+import org.Artificial.beastofburden.network.ModNetwork;
+import org.Artificial.beastofburden.network.CyclePlanningModeMessage;
+import org.Artificial.beastofburden.network.ToggleAutonomousPlanningMessage;
 import org.Artificial.beastofburden.colony.buildings.modules.TownHallBeastofburdenModuleView;
+import org.Artificial.beastofburden.colony.planning.ColonyPhase;
+import org.Artificial.beastofburden.colony.planning.PlanningMode;
 import org.Artificial.beastofburden.colony.work.BeastWorkLogAction;
 import org.Artificial.beastofburden.colony.work.BeastWorkLogEntry;
 import org.Artificial.beastofburden.colony.work.BeastWorkPhase;
@@ -47,6 +52,10 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
     private static final String LABEL_HISTORY_NOTE = "historyNote";
 
     private static final String BUTTON_HIRE = "hire";
+    private static final String BUTTON_TOGGLE_PLANNING = "togglePlanning";
+    private static final String BUTTON_CYCLE_PLANNING_MODE = "cyclePlanningMode";
+    private static final String LABEL_PLANNING_STATUS = "planningStatus";
+    private static final String LABEL_PLANNING_DETAIL = "planningDetail";
 
     private final TownHallBeastofburdenModuleView moduleView;
     private int refreshCooldown = 20;
@@ -56,6 +65,8 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
         super(moduleView, WINDOW_LAYOUT);
         this.moduleView = moduleView;
         registerButton(BUTTON_HIRE, this::hireClicked);
+        registerButton(BUTTON_TOGGLE_PLANNING, this::togglePlanningClicked);
+        registerButton(BUTTON_CYCLE_PLANNING_MODE, this::cyclePlanningModeClicked);
     }
 
     /**
@@ -71,8 +82,23 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
     public void onOpened()
     {
         registerButton(BUTTON_HIRE, this::hireClicked);
+        registerButton(BUTTON_TOGGLE_PLANNING, this::togglePlanningClicked);
+        registerButton(BUTTON_CYCLE_PLANNING_MODE, this::cyclePlanningModeClicked);
         super.onOpened();
         refreshWorkPanels();
+    }
+
+    private void togglePlanningClicked(@NotNull final Button button)
+    {
+        final boolean next = !moduleView.isAutonomousPlanningEnabled();
+        ModNetwork.CHANNEL.sendToServer(new ToggleAutonomousPlanningMessage(buildingView.getPosition(), next));
+        refreshPlanningControls(next, moduleView.getPlanningMode());
+    }
+
+    private void cyclePlanningModeClicked(@NotNull final Button button)
+    {
+        ModNetwork.CHANNEL.sendToServer(new CyclePlanningModeMessage(buildingView.getPosition()));
+        refreshPlanningModeButton(moduleView.getPlanningMode().next());
     }
 
     @Override
@@ -95,6 +121,17 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
     private void refreshWorkPanels()
     {
         final BeastWorkSnapshot snapshot = moduleView.getWorkSnapshot();
+        refreshPlanningControls(snapshot.isAutonomousPlanningEnabled(), snapshot.getPlanningMode());
+        refreshPlanningStatus(
+          snapshot.getPlanningMode(),
+          snapshot.getScriptedStepIndex(),
+          snapshot.getScriptedStepCount(),
+          snapshot.getPlanningPhase(),
+          snapshot.getPlanningLastDecision(),
+          snapshot.getPlanningDetail(),
+          snapshot.isAutonomousPlanningEnabled()
+        );
+
         final Text historyNote = findPaneOfTypeByID(LABEL_HISTORY_NOTE, Text.class);
         if (historyNote != null)
         {
@@ -114,6 +151,137 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
 
         refreshActiveWork(snapshot.getActiveWork());
         refreshHistory(snapshot.getHistory());
+    }
+
+    private void refreshPlanningControls(final boolean enabled, @NotNull final PlanningMode mode)
+    {
+        final Button button = findPaneOfTypeByID(BUTTON_TOGGLE_PLANNING, Button.class);
+        if (button != null)
+        {
+            button.setText(Component.translatable(
+              enabled ? "com.beastofburden.gui.townhall.planning_on" : "com.beastofburden.gui.townhall.planning_off"
+            ));
+        }
+        refreshPlanningModeButton(mode);
+    }
+
+    private void refreshPlanningModeButton(@NotNull final PlanningMode mode)
+    {
+        final Button button = findPaneOfTypeByID(BUTTON_CYCLE_PLANNING_MODE, Button.class);
+        if (button != null)
+        {
+            button.setText(Component.translatable(
+              mode == PlanningMode.SCRIPTED
+                ? "com.beastofburden.gui.townhall.planning_mode.scripted"
+                : "com.beastofburden.gui.townhall.planning_mode.heuristic"
+            ));
+        }
+    }
+
+    private void refreshPlanningStatus(
+      @NotNull final PlanningMode mode,
+      final int scriptedStepIndex,
+      final int scriptedStepCount,
+      @NotNull final ColonyPhase phase,
+      @NotNull final String lastDecision,
+      @NotNull final String planningDetail,
+      final boolean enabled)
+    {
+        final Text status = findPaneOfTypeByID(LABEL_PLANNING_STATUS, Text.class);
+        final Text detail = findPaneOfTypeByID(LABEL_PLANNING_DETAIL, Text.class);
+        if (status == null)
+        {
+            return;
+        }
+
+        if (!enabled)
+        {
+            status.setText(Component.translatable("com.beastofburden.gui.townhall.planning_disabled"));
+            if (detail != null)
+            {
+                detail.setText(Component.empty());
+            }
+            return;
+        }
+
+        if (mode == PlanningMode.SCRIPTED)
+        {
+            if (scriptedStepIndex >= scriptedStepCount && scriptedStepCount > 0)
+            {
+                status.setText(Component.translatable("com.beastofburden.gui.townhall.scripted.complete"));
+            }
+            else if (lastDecision.isEmpty())
+            {
+                status.setText(Component.translatable(
+                  "com.beastofburden.gui.townhall.scripted.step",
+                  scriptedStepIndex + 1,
+                  scriptedStepCount,
+                  Component.translatable(scriptedStepKey(scriptedStepIndex))
+                ));
+            }
+            else
+            {
+                status.setText(Component.translatable(
+                  "com.beastofburden.gui.townhall.scripted.status",
+                  scriptedStepIndex + 1,
+                  scriptedStepCount,
+                  Component.translatable(scriptedStepKey(scriptedStepIndex)),
+                  resolvePlanningDecision(lastDecision)
+                ));
+            }
+        }
+        else if (lastDecision.isEmpty())
+        {
+            status.setText(Component.translatable(
+              "com.beastofburden.gui.townhall.planning_phase",
+              Component.translatable("com.beastofburden.gui.townhall.phase." + phase.name().toLowerCase(Locale.ROOT))
+            ));
+        }
+        else
+        {
+            final Component decision = resolvePlanningDecision(lastDecision);
+            status.setText(Component.translatable(
+              "com.beastofburden.gui.townhall.planning_status",
+              Component.translatable("com.beastofburden.gui.townhall.phase." + phase.name().toLowerCase(Locale.ROOT)),
+              decision
+            ));
+        }
+
+        if (detail != null)
+        {
+            if (planningDetail.isEmpty())
+            {
+                detail.setText(Component.empty());
+            }
+            else
+            {
+                detail.setText(Component.literal(planningDetail));
+            }
+        }
+    }
+
+    @NotNull
+    private static String scriptedStepKey(final int stepIndex)
+    {
+        return "com.beastofburden.gui.townhall.scripted.step." + (stepIndex + 1);
+    }
+
+    @NotNull
+    private Component resolvePlanningDecision(@NotNull final String lastDecision)
+    {
+        if (lastDecision.startsWith("builders_busy:"))
+        {
+            return Component.translatable("com.beastofburden.gui.townhall.planning.builders_busy", lastDecision.substring("builders_busy:".length()));
+        }
+
+        if ("scripted_complete".equals(lastDecision))
+        {
+            return Component.translatable("com.beastofburden.gui.townhall.scripted.complete");
+        }
+
+        final String key = "com.beastofburden.gui.townhall.planning." + lastDecision;
+        final Component translated = Component.translatable(key);
+        return translated.getString().equals(key) ? Component.literal(lastDecision) : translated;
     }
 
     private void refreshActiveWork(@NotNull final List<BeastWorkStatus> activeWork)
@@ -167,6 +335,19 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
                         icon.setVisible(false);
                     }
                     itemLine.setText(Component.translatable("com.beastofburden.gui.townhall.idle"));
+                    progress.setSize(0, progress.getHeight());
+                    return;
+                }
+
+                if (status.getPhase() == BeastWorkPhase.PLANNING)
+                {
+                    if (icon != null)
+                    {
+                        icon.setVisible(false);
+                    }
+                    itemLine.setText(status.getDetail().isEmpty()
+                      ? Component.translatable("com.beastofburden.gui.townhall.planning_work")
+                      : Component.literal(status.getDetail()));
                     progress.setSize(0, progress.getHeight());
                     return;
                 }
@@ -291,6 +472,15 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
               stack.getHoverName(),
               entry.getCount(),
               formatSeconds(entry.getDurationTicks())
+            );
+        }
+
+        if (entry.getAction() == BeastWorkLogAction.PLANNED && !entry.getDetail().isEmpty())
+        {
+            return Component.translatable(
+              "com.beastofburden.gui.townhall.history_planned",
+              stack.getHoverName(),
+              entry.getDetail()
             );
         }
 

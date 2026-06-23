@@ -1,6 +1,8 @@
 package org.Artificial.beastofburden.colony.work;
 
 import net.minecraft.network.FriendlyByteBuf;
+import org.Artificial.beastofburden.colony.planning.ColonyPhase;
+import org.Artificial.beastofburden.colony.planning.PlanningMode;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -12,23 +14,46 @@ import java.util.List;
  */
 public final class BeastWorkSnapshot
 {
-    public static final BeastWorkSnapshot EMPTY = new BeastWorkSnapshot(0, 0, List.of(), List.of());
+    public static final BeastWorkSnapshot EMPTY = new BeastWorkSnapshot(
+      0, 0, List.of(), List.of(), false, PlanningMode.HEURISTIC, 0, 0, ColonyPhase.P0_FOUNDATION, "", ""
+    );
 
     private final int colonyDay;
     private final int historyDays;
     private final List<BeastWorkStatus> activeWork;
     private final List<BeastWorkLogEntry> history;
+    private final boolean autonomousPlanningEnabled;
+    private final PlanningMode planningMode;
+    private final int scriptedStepIndex;
+    private final int scriptedStepCount;
+    private final ColonyPhase planningPhase;
+    private final String planningLastDecision;
+    private final String planningDetail;
 
     public BeastWorkSnapshot(
       final int colonyDay,
       final int historyDays,
       @NotNull final List<BeastWorkStatus> activeWork,
-      @NotNull final List<BeastWorkLogEntry> history)
+      @NotNull final List<BeastWorkLogEntry> history,
+      final boolean autonomousPlanningEnabled,
+      @NotNull final PlanningMode planningMode,
+      final int scriptedStepIndex,
+      final int scriptedStepCount,
+      @NotNull final ColonyPhase planningPhase,
+      @NotNull final String planningLastDecision,
+      @NotNull final String planningDetail)
     {
         this.colonyDay = colonyDay;
         this.historyDays = historyDays;
         this.activeWork = List.copyOf(activeWork);
         this.history = List.copyOf(history);
+        this.autonomousPlanningEnabled = autonomousPlanningEnabled;
+        this.planningMode = planningMode;
+        this.scriptedStepIndex = scriptedStepIndex;
+        this.scriptedStepCount = scriptedStepCount;
+        this.planningPhase = planningPhase;
+        this.planningLastDecision = planningLastDecision;
+        this.planningDetail = planningDetail;
     }
 
     public int getColonyDay()
@@ -53,6 +78,45 @@ public final class BeastWorkSnapshot
         return history;
     }
 
+    public boolean isAutonomousPlanningEnabled()
+    {
+        return autonomousPlanningEnabled;
+    }
+
+    @NotNull
+    public PlanningMode getPlanningMode()
+    {
+        return planningMode;
+    }
+
+    public int getScriptedStepIndex()
+    {
+        return scriptedStepIndex;
+    }
+
+    public int getScriptedStepCount()
+    {
+        return scriptedStepCount;
+    }
+
+    @NotNull
+    public ColonyPhase getPlanningPhase()
+    {
+        return planningPhase;
+    }
+
+    @NotNull
+    public String getPlanningLastDecision()
+    {
+        return planningLastDecision;
+    }
+
+    @NotNull
+    public String getPlanningDetail()
+    {
+        return planningDetail;
+    }
+
     @NotNull
     public static BeastWorkSnapshot read(@NotNull final FriendlyByteBuf buf)
     {
@@ -73,7 +137,27 @@ public final class BeastWorkSnapshot
             history.add(BeastWorkLogEntry.read(buf));
         }
 
-        return new BeastWorkSnapshot(colonyDay, historyDays, active, history);
+        final boolean planningEnabled = buf.readBoolean();
+        final PlanningMode mode = PlanningMode.fromId(buf.readByte());
+        final int scriptedStepIndex = buf.readVarInt();
+        final int scriptedStepCount = buf.readVarInt();
+        final ColonyPhase phase = ColonyPhase.fromId(buf.readByte());
+        final String lastDecision = buf.readUtf();
+        final String planningDetail = buf.readableBytes() > 0 ? buf.readUtf() : "";
+
+        return new BeastWorkSnapshot(
+          colonyDay,
+          historyDays,
+          active,
+          history,
+          planningEnabled,
+          mode,
+          scriptedStepIndex,
+          scriptedStepCount,
+          phase,
+          lastDecision,
+          planningDetail
+        );
     }
 
     public void write(@NotNull final FriendlyByteBuf buf)
@@ -90,5 +174,12 @@ public final class BeastWorkSnapshot
         {
             entry.write(buf);
         }
+        buf.writeBoolean(autonomousPlanningEnabled);
+        buf.writeByte(planningMode.ordinal());
+        buf.writeVarInt(scriptedStepIndex);
+        buf.writeVarInt(scriptedStepCount);
+        buf.writeByte(planningPhase.ordinal());
+        buf.writeUtf(planningLastDecision);
+        buf.writeUtf(planningDetail);
     }
 }

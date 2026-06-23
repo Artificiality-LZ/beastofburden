@@ -24,6 +24,8 @@ public final class ModNetwork
     public static void register()
     {
         CHANNEL.registerMessage(nextId(), SaveBeastConfigMessage.class, SaveBeastConfigMessage::encode, SaveBeastConfigMessage::decode, SaveBeastConfigMessage::handle);
+        CHANNEL.registerMessage(nextId(), ToggleAutonomousPlanningMessage.class, ToggleAutonomousPlanningMessage::encode, ToggleAutonomousPlanningMessage::decode, ToggleAutonomousPlanningMessage::handle);
+        CHANNEL.registerMessage(nextId(), CyclePlanningModeMessage.class, CyclePlanningModeMessage::encode, CyclePlanningModeMessage::decode, CyclePlanningModeMessage::handle);
     }
 
     private static int nextId()

@@ -171,6 +171,11 @@ public final class ColonyRequestEventHandler
         return COLONY_QUEUES.computeIfAbsent(colony.getID(), id -> new BeastofBurdenRequestQueue());
     }
 
+    public static void purgeQueue(@NotNull final IColony colony)
+    {
+        getQueue(colony).purgeInvalid(colony);
+    }
+
     public static void clearColonyQueue(final int colonyId)
     {
         COLONY_QUEUES.remove(colonyId);

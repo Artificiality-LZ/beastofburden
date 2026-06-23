@@ -4,6 +4,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Live work status for one assigned beast-of-burden citizen.
@@ -17,6 +18,7 @@ public final class BeastWorkStatus
     private final int count;
     private final int progressTicks;
     private final int requiredTicks;
+    private final String detail;
 
     public BeastWorkStatus(
       final int citizenId,
@@ -27,6 +29,19 @@ public final class BeastWorkStatus
       final int progressTicks,
       final int requiredTicks)
     {
+        this(citizenId, citizenName, phase, itemId, count, progressTicks, requiredTicks, "");
+    }
+
+    public BeastWorkStatus(
+      final int citizenId,
+      @NotNull final String citizenName,
+      @NotNull final BeastWorkPhase phase,
+      @NotNull final ResourceLocation itemId,
+      final int count,
+      final int progressTicks,
+      final int requiredTicks,
+      @NotNull final String detail)
+    {
         this.citizenId = citizenId;
         this.citizenName = citizenName;
         this.phase = phase;
@@ -34,6 +49,7 @@ public final class BeastWorkStatus
         this.count = count;
         this.progressTicks = progressTicks;
         this.requiredTicks = requiredTicks;
+        this.detail = detail;
     }
 
     public int getCitizenId()
@@ -80,6 +96,12 @@ public final class BeastWorkStatus
     }
 
     @NotNull
+    public String getDetail()
+    {
+        return detail;
+    }
+
+    @NotNull
     public static BeastWorkStatus idle(final int citizenId, @NotNull final String citizenName)
     {
         return new BeastWorkStatus(citizenId, citizenName, BeastWorkPhase.IDLE, ResourceLocation.fromNamespaceAndPath("minecraft", "air"), 0, 0, 0);
@@ -119,6 +141,44 @@ public final class BeastWorkStatus
     }
 
     @NotNull
+    public static BeastWorkStatus planning(
+      final int citizenId,
+      @NotNull final String citizenName,
+      @NotNull final ResourceLocation hutItem,
+      @NotNull final String detail)
+    {
+        return new BeastWorkStatus(
+          citizenId,
+          citizenName,
+          BeastWorkPhase.PLANNING,
+          hutItem,
+          1,
+          0,
+          0,
+          detail
+        );
+    }
+
+    @NotNull
+    public static BeastWorkStatus planningIdle(
+      final int citizenId,
+      @NotNull final String citizenName,
+      @NotNull final String phase,
+      @Nullable final String lastDecision)
+    {
+        return new BeastWorkStatus(
+          citizenId,
+          citizenName,
+          BeastWorkPhase.PLANNING,
+          ResourceLocation.fromNamespaceAndPath("minecraft", "air"),
+          0,
+          0,
+          0,
+          phase + (lastDecision == null || lastDecision.isEmpty() ? "" : ": " + lastDecision)
+        );
+    }
+
+    @NotNull
     public static BeastWorkStatus read(@NotNull final FriendlyByteBuf buf)
     {
         return new BeastWorkStatus(
@@ -128,7 +188,8 @@ public final class BeastWorkStatus
           buf.readResourceLocation(),
           buf.readVarInt(),
           buf.readVarInt(),
-          buf.readVarInt()
+          buf.readVarInt(),
+          buf.readUtf()
         );
     }
 
@@ -141,5 +202,6 @@ public final class BeastWorkStatus
         buf.writeVarInt(count);
         buf.writeVarInt(progressTicks);
         buf.writeVarInt(requiredTicks);
+        buf.writeUtf(detail);
     }
 }

@@ -34,6 +34,7 @@ public final class SaveBeastConfigMessage
         buf.writeBoolean(message.snapshot.deriveFromRecipes());
         buf.writeVarInt(message.snapshot.workLogMaxEntries());
         buf.writeVarInt(message.snapshot.workLogHistoryDays());
+        buf.writeBoolean(message.snapshot.planningInstantBuildDebug());
         buf.writeVarInt(message.snapshot.itemValues().size());
         for (final Map.Entry<Item, Integer> entry : message.snapshot.itemValues().entrySet())
         {
@@ -52,6 +53,7 @@ public final class SaveBeastConfigMessage
         final boolean derive = buf.readBoolean();
         final int logMax = buf.readVarInt();
         final int logDays = buf.readVarInt();
+        final boolean instantBuildDebug = buf.readBoolean();
         final int count = buf.readVarInt();
         final Map<Item, Integer> itemValues = new HashMap<>();
         for (int i = 0; i < count; i++)
@@ -67,7 +69,7 @@ public final class SaveBeastConfigMessage
                 buf.readVarInt();
             }
         }
-        return new SaveBeastConfigMessage(new ConfigSnapshot(base, min, ticksPerValue, strengthBonus, defaultValue, derive, logMax, logDays, itemValues));
+        return new SaveBeastConfigMessage(new ConfigSnapshot(base, min, ticksPerValue, strengthBonus, defaultValue, derive, logMax, logDays, instantBuildDebug, itemValues));
     }
 
     public static void handle(final SaveBeastConfigMessage message, final Supplier<NetworkEvent.Context> contextSupplier)

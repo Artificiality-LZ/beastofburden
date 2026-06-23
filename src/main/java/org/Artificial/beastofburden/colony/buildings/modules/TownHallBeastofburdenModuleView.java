@@ -10,6 +10,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.Artificial.beastofburden.client.gui.BeastofburdenModuleWindow;
 import org.Artificial.beastofburden.colony.jobs.BeastofburdenJobs;
+import org.Artificial.beastofburden.colony.planning.ColonyPhase;
+import org.Artificial.beastofburden.colony.planning.PlanningMode;
 import org.Artificial.beastofburden.colony.work.BeastWorkSnapshot;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,6 +27,12 @@ public class TownHallBeastofburdenModuleView extends WorkerBuildingModuleView
 
     private BeastWorkSnapshot workSnapshot = BeastWorkSnapshot.EMPTY;
     private boolean workUpdated = true;
+    private boolean autonomousPlanningEnabled;
+    private PlanningMode planningMode = PlanningMode.HEURISTIC;
+    private int scriptedStepIndex;
+    private int scriptedStepCount;
+    private ColonyPhase planningPhase = ColonyPhase.P0_FOUNDATION;
+    private String planningLastDecision = "";
 
     @Override
     public ResourceLocation getIconResourceLocation()
@@ -56,7 +64,46 @@ public class TownHallBeastofburdenModuleView extends WorkerBuildingModuleView
     {
         super.deserialize(buf);
         workSnapshot = BeastWorkSnapshot.read(buf);
+        autonomousPlanningEnabled = workSnapshot.isAutonomousPlanningEnabled();
+        planningMode = workSnapshot.getPlanningMode();
+        scriptedStepIndex = workSnapshot.getScriptedStepIndex();
+        scriptedStepCount = workSnapshot.getScriptedStepCount();
+        planningPhase = workSnapshot.getPlanningPhase();
+        planningLastDecision = workSnapshot.getPlanningLastDecision();
         workUpdated = true;
+    }
+
+    public boolean isAutonomousPlanningEnabled()
+    {
+        return autonomousPlanningEnabled;
+    }
+
+    @NotNull
+    public PlanningMode getPlanningMode()
+    {
+        return planningMode;
+    }
+
+    public int getScriptedStepIndex()
+    {
+        return scriptedStepIndex;
+    }
+
+    public int getScriptedStepCount()
+    {
+        return scriptedStepCount;
+    }
+
+    @NotNull
+    public ColonyPhase getPlanningPhase()
+    {
+        return planningPhase;
+    }
+
+    @NotNull
+    public String getPlanningLastDecision()
+    {
+        return planningLastDecision;
     }
 
     public boolean checkAndResetWorkUpdated()

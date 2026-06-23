@@ -92,6 +92,11 @@ public class BeastofBurdenRequestQueue
         return queue.isEmpty();
     }
 
+    public synchronized boolean hasInFlight()
+    {
+        return !inFlightTokens.isEmpty();
+    }
+
     public synchronized int size()
     {
         return queue.size();
@@ -136,6 +141,26 @@ public class BeastofBurdenRequestQueue
             }
 
             return false;
+        });
+
+        inFlightTokens.removeIf(token -> {
+            final IRequest<?> request = manager.getRequestForToken(token);
+            if (request == null)
+            {
+                return true;
+            }
+
+            final RequestState state = request.getState();
+            if (state == RequestState.COMPLETED
+                  || state == RequestState.CANCELLED
+                  || state == RequestState.FAILED
+                  || state == RequestState.OVERRULED
+                  || state == RequestState.RECEIVED)
+            {
+                return true;
+            }
+
+            return !UnfulfillableRequestDetector.isUnfulfillable(colony, request);
         });
     }
 

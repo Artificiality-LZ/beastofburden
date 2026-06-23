@@ -7,7 +7,8 @@ public enum BeastWorkLogAction
 {
     GENERATED,
     DELIVERED,
-    CANCELLED;
+    CANCELLED,
+    PLANNED;
 
     public static BeastWorkLogAction fromId(final int id)
     {

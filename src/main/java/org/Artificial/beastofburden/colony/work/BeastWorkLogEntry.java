@@ -18,6 +18,7 @@ public final class BeastWorkLogEntry
     private static final String TAG_ITEM = "item";
     private static final String TAG_COUNT = "count";
     private static final String TAG_DURATION = "duration";
+    private static final String TAG_DETAIL = "detail";
 
     private final int colonyDay;
     private final int citizenId;
@@ -26,6 +27,7 @@ public final class BeastWorkLogEntry
     private final ResourceLocation itemId;
     private final int count;
     private final int durationTicks;
+    private final String detail;
 
     public BeastWorkLogEntry(
       final int colonyDay,
@@ -36,6 +38,19 @@ public final class BeastWorkLogEntry
       final int count,
       final int durationTicks)
     {
+        this(colonyDay, citizenId, citizenName, action, itemId, count, durationTicks, "");
+    }
+
+    public BeastWorkLogEntry(
+      final int colonyDay,
+      final int citizenId,
+      @NotNull final String citizenName,
+      @NotNull final BeastWorkLogAction action,
+      @NotNull final ResourceLocation itemId,
+      final int count,
+      final int durationTicks,
+      @NotNull final String detail)
+    {
         this.colonyDay = colonyDay;
         this.citizenId = citizenId;
         this.citizenName = citizenName;
@@ -43,6 +58,7 @@ public final class BeastWorkLogEntry
         this.itemId = itemId;
         this.count = count;
         this.durationTicks = durationTicks;
+        this.detail = detail;
     }
 
     public int getColonyDay()
@@ -84,6 +100,12 @@ public final class BeastWorkLogEntry
     }
 
     @NotNull
+    public String getDetail()
+    {
+        return detail;
+    }
+
+    @NotNull
     public static BeastWorkLogEntry read(@NotNull final FriendlyByteBuf buf)
     {
         return new BeastWorkLogEntry(
@@ -93,7 +115,8 @@ public final class BeastWorkLogEntry
           BeastWorkLogAction.fromId(buf.readByte()),
           buf.readResourceLocation(),
           buf.readVarInt(),
-          buf.readVarInt()
+          buf.readVarInt(),
+          buf.readUtf()
         );
     }
 
@@ -106,6 +129,7 @@ public final class BeastWorkLogEntry
         buf.writeResourceLocation(itemId);
         buf.writeVarInt(count);
         buf.writeVarInt(durationTicks);
+        buf.writeUtf(detail);
     }
 
     @NotNull
@@ -119,6 +143,10 @@ public final class BeastWorkLogEntry
         tag.putString(TAG_ITEM, itemId.toString());
         tag.putInt(TAG_COUNT, count);
         tag.putInt(TAG_DURATION, durationTicks);
+        if (!detail.isEmpty())
+        {
+            tag.putString(TAG_DETAIL, detail);
+        }
         return tag;
     }
 
@@ -132,7 +160,8 @@ public final class BeastWorkLogEntry
           BeastWorkLogAction.fromId(tag.getInt(TAG_ACTION)),
           ResourceLocation.parse(tag.getString(TAG_ITEM)),
           tag.getInt(TAG_COUNT),
-          tag.getInt(TAG_DURATION)
+          tag.getInt(TAG_DURATION),
+          tag.getString(TAG_DETAIL)
         );
     }
 

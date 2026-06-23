@@ -108,15 +108,6 @@ public final class ColonyLogistics
     }
 
     /**
-     * Find the citizen who created the given open request, if any.
-     */
-    @NotNull
-    public static Optional<ICitizenData> findRequestingCitizen(@NotNull final IColony colony, @NotNull final IToken<?> requestId)
-    {
-        return findRequestTarget(colony, requestId).flatMap(RequestTarget::citizen);
-    }
-
-    /**
      * Resolve the building (and optional citizen) that owns an open request.
      */
     @NotNull

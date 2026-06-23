@@ -136,11 +136,6 @@ public final class UnfulfillableRequestDetector
         return Integer.MIN_VALUE;
     }
 
-    public static boolean isOpenOnAnyCitizen(@NotNull final IColony colony, @NotNull final IRequest<?> request)
-    {
-        return ColonyLogistics.isOpenOnAnyBuilding(colony, request);
-    }
-
     private static void collectFromTokens(
       @NotNull final IRequestManager manager,
       @NotNull final Collection<IToken<?>> tokens,

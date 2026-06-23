@@ -7,7 +7,8 @@ public enum BeastWorkPhase
 {
     IDLE,
     GENERATING,
-    DELIVERING;
+    DELIVERING,
+    PLANNING;
 
     public static BeastWorkPhase fromId(final int id)
     {
