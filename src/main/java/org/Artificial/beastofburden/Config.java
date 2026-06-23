@@ -116,13 +116,6 @@ public class Config
             )
             .define("planningRequireRoadAccess", false);
 
-    private static final ForgeConfigSpec.BooleanValue PLANNING_INSTANT_BUILD_DEBUG = BUILDER
-            .comment(
-              "Debug: when the beast plans a hut, paste the blueprint instantly instead of requesting a builder.",
-              "For testing colony planning only — disable for normal survival play."
-            )
-            .define("planningInstantBuildDebug", false);
-
     private static final ForgeConfigSpec.IntValue PLANNING_RESEARCH_TICK_INTERVAL = BUILDER
             .comment("Ticks between autonomous university research attempts.")
             .defineInRange("planningResearchTickInterval", 600, 40, 24000);
@@ -157,7 +150,6 @@ public class Config
     public static int planningMaxBuilderQueue;
     public static int planningMinBlueprintSeparation;
     public static boolean planningRequireRoadAccess;
-    public static boolean planningInstantBuildDebug;
     public static int planningResearchTickInterval;
     public static Map<Item, Integer> explicitItemValues = Map.of();
 
@@ -273,7 +265,6 @@ public class Config
         planningMaxBuilderQueue = PLANNING_MAX_BUILDER_QUEUE.get();
         planningMinBlueprintSeparation = PLANNING_MIN_BLUEPRINT_SEPARATION.get();
         planningRequireRoadAccess = PLANNING_REQUIRE_ROAD_ACCESS.get();
-        planningInstantBuildDebug = PLANNING_INSTANT_BUILD_DEBUG.get();
         planningResearchTickInterval = PLANNING_RESEARCH_TICK_INTERVAL.get();
 
         final Map<Item, Integer> parsed = new HashMap<>();
@@ -312,7 +303,6 @@ public class Config
       final boolean deriveRecipes,
       final int logMaxEntries,
       final int logHistoryDays,
-      final boolean instantBuildDebug,
       @NotNull final Map<Item, Integer> itemValues)
     {
         BASE_GENERATION_TICKS.set(baseTicks);
@@ -323,7 +313,6 @@ public class Config
         DERIVE_FROM_RECIPES.set(deriveRecipes);
         WORK_LOG_MAX_ENTRIES.set(logMaxEntries);
         WORK_LOG_HISTORY_DAYS.set(logHistoryDays);
-        PLANNING_INSTANT_BUILD_DEBUG.set(instantBuildDebug);
 
         final List<String> entries = new ArrayList<>();
         for (final Map.Entry<Item, Integer> entry : itemValues.entrySet())
@@ -340,7 +329,6 @@ public class Config
         deriveFromRecipes = deriveRecipes;
         workLogMaxEntries = logMaxEntries;
         workLogHistoryDays = logHistoryDays;
-        planningInstantBuildDebug = instantBuildDebug;
         explicitItemValues = Map.copyOf(itemValues);
 
         reloadCachedValues();

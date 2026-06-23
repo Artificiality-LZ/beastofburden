@@ -2,6 +2,8 @@ package org.Artificial.beastofburden.colony.planning;
 
 import com.minecolonies.api.colony.ICitizenData;
 import com.minecolonies.api.colony.IColony;
+import com.minecolonies.api.colony.IColonyManager;
+import com.minecolonies.api.colony.buildings.IBuilding;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import org.Artificial.beastofburden.colony.buildings.modules.TownHallBeastofburdenModule;
@@ -9,7 +11,9 @@ import org.Artificial.beastofburden.colony.work.BeastWorkLogAction;
 import org.Artificial.beastofburden.colony.work.BeastWorkLogEntry;
 import org.Artificial.beastofburden.colony.work.BeastWorkStatus;
 import org.Artificial.beastofburden.event.ColonyRequestEventHandler;
+import org.Artificial.beastofburden.util.ColonyBuildings;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Server tick adapter between the Town Hall module and the autonomous planner.
@@ -61,6 +65,51 @@ public final class ColonyPlannerDriver
         {
             appendPlanningWork(module, colony, result);
         }
+    }
+
+    /**
+     * Clears planning retry cooldown for one or all colonies with a Beast Town Hall module.
+     *
+     * @param colonyId when non-null, only that colony id is updated
+     * @return number of colonies whose cooldown was cleared
+     */
+    public static int refreshPlanningCooldown(@Nullable final Integer colonyId)
+    {
+        int updated = 0;
+        for (final IColony colony : IColonyManager.getInstance().getAllColonies())
+        {
+            if (colony == null)
+            {
+                continue;
+            }
+            if (colonyId != null && colony.getID() != colonyId)
+            {
+                continue;
+            }
+
+            final TownHallBeastofburdenModule module = findBeastModule(colony);
+            if (module == null)
+            {
+                continue;
+            }
+
+            final ColonyPlanner planner = module.getColonyPlanner();
+            planner.clearRetryCooldown();
+            module.syncPlanningState(planner);
+            updated++;
+        }
+        return updated;
+    }
+
+    @Nullable
+    private static TownHallBeastofburdenModule findBeastModule(@NotNull final IColony colony)
+    {
+        final IBuilding townHall = ColonyBuildings.getTownHall(colony);
+        if (townHall == null)
+        {
+            return null;
+        }
+        return townHall.getFirstModuleOccurance(TownHallBeastofburdenModule.class);
     }
 
     private static void syncWaiting(

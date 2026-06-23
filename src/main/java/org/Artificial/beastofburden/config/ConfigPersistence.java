@@ -28,7 +28,6 @@ public final class ConfigPersistence
           snapshot.deriveFromRecipes(),
           snapshot.workLogMaxEntries(),
           snapshot.workLogHistoryDays(),
-          snapshot.planningInstantBuildDebug(),
           snapshot.itemValues()
         );
         saveCommonConfig();

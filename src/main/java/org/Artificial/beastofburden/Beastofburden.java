@@ -3,6 +3,7 @@ package org.Artificial.beastofburden;
 import com.minecolonies.api.colony.jobs.registry.IJobRegistry;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -14,6 +15,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.Artificial.beastofburden.colony.buildings.BeastofburdenBuildingModules;
 import org.Artificial.beastofburden.colony.jobs.BeastofburdenCitizenSounds;
 import org.Artificial.beastofburden.colony.jobs.BeastofburdenJobs;
+import org.Artificial.beastofburden.command.BeastofburdenCommands;
 import org.slf4j.Logger;
 
 @Mod(Beastofburden.MODID)
@@ -57,5 +59,11 @@ public class Beastofburden
     public void onServerStarting(final ServerStartingEvent event)
     {
         LOGGER.info("[{}] Server starting.", MODID);
+    }
+
+    @SubscribeEvent
+    public void onRegisterCommands(final RegisterCommandsEvent event)
+    {
+        BeastofburdenCommands.register(event.getDispatcher());
     }
 }

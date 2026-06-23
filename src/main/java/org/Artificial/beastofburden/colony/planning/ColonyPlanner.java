@@ -72,6 +72,22 @@ public final class ColonyPlanner
         retryCooldown = Math.max(0, ticks);
     }
 
+    /**
+     * Clears the retry cooldown so the next planning pass can run immediately (debug / admin).
+     */
+    public void clearRetryCooldown()
+    {
+        retryCooldown = 0;
+        if ("cooldown".equals(lastDecision))
+        {
+            lastDecision = "";
+        }
+        if ("cooldown".equals(report.getDecision()))
+        {
+            report.clear();
+        }
+    }
+
     @NotNull
     public PlanningReport getReport()
     {

@@ -17,7 +17,6 @@ public record ConfigSnapshot(
   boolean deriveFromRecipes,
   int workLogMaxEntries,
   int workLogHistoryDays,
-  boolean planningInstantBuildDebug,
   @NotNull Map<Item, Integer> itemValues)
 {
     @NotNull
@@ -32,7 +31,6 @@ public record ConfigSnapshot(
           org.Artificial.beastofburden.Config.deriveFromRecipes,
           org.Artificial.beastofburden.Config.workLogMaxEntries,
           org.Artificial.beastofburden.Config.workLogHistoryDays,
-          org.Artificial.beastofburden.Config.planningInstantBuildDebug,
           org.Artificial.beastofburden.Config.copyExplicitItemValues()
         );
     }

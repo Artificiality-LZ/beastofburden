@@ -1,16 +1,22 @@
 package org.Artificial.beastofburden.util;
 
 import com.minecolonies.api.colony.IColony;
+import com.minecolonies.api.colony.buildingextensions.IBuildingExtension;
 import com.minecolonies.api.colony.buildings.IBuilding;
 import com.minecolonies.api.colony.buildings.ModBuildings;
 import com.minecolonies.api.colony.buildings.modules.IBuildingModule;
 import com.minecolonies.api.colony.buildings.registry.BuildingEntry;
 import com.minecolonies.api.colony.managers.interfaces.IRegisteredStructureManager;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
+import org.Artificial.beastofburden.colony.planning.BuildingFootprint;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Registers and counts farmer fields (MineColonies 1.20+ building extensions API).
@@ -20,6 +26,7 @@ public final class ColonyFieldSupport
     private static final String FARM_FIELD_CLASS = "com.minecolonies.core.colony.buildingextensions.FarmField";
     private static final String EXTENSION_INTERFACE = "com.minecolonies.api.colony.buildingextensions.IBuildingExtension";
     private static final String FARMER_FIELDS_MODULE = "com.minecolonies.core.colony.buildings.workerbuildings.BuildingFarmer$FarmerFieldsModule";
+    private static final int DEFAULT_FIELD_RANGE = 5;
 
     private ColonyFieldSupport()
     {
@@ -36,7 +43,7 @@ public final class ColonyFieldSupport
         int count = 0;
         for (final var extension : manager.getBuildingExtensions(ext -> farmerPos.equals(ext.getBuildingId())))
         {
-            if (extension != null)
+            if (isFarmField(extension))
             {
                 count++;
             }
@@ -53,7 +60,7 @@ public final class ColonyFieldSupport
         }
 
         int count = 0;
-        for (final var extension : manager.getBuildingExtensions(ext -> true))
+        for (final var extension : manager.getBuildingExtensions(ColonyFieldSupport::isFarmField))
         {
             if (extension != null)
             {
@@ -63,11 +70,69 @@ public final class ColonyFieldSupport
         return count;
     }
 
+    @NotNull
+    public static List<BlockPos> listFieldAnchors(@NotNull final IColony colony)
+    {
+        final IRegisteredStructureManager manager = getStructureManager(colony);
+        final List<BlockPos> anchors = new ArrayList<>();
+        if (manager == null)
+        {
+            return anchors;
+        }
+
+        for (final var extension : manager.getBuildingExtensions(ColonyFieldSupport::isFarmField))
+        {
+            if (extension != null)
+            {
+                anchors.add(extension.getPosition());
+            }
+        }
+        return anchors;
+    }
+
+    public static boolean hasFieldAt(@NotNull final IColony colony, @NotNull final BlockPos anchor)
+    {
+        for (final BlockPos existing : listFieldAnchors(colony))
+        {
+            if (existing.equals(anchor))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @NotNull
+    public static List<BuildingFootprint> collectFieldFootprints(@NotNull final IColony colony)
+    {
+        final IRegisteredStructureManager manager = getStructureManager(colony);
+        final List<BuildingFootprint> footprints = new ArrayList<>();
+        if (manager == null)
+        {
+            return footprints;
+        }
+
+        for (final var extension : manager.getBuildingExtensions(ColonyFieldSupport::isFarmField))
+        {
+            if (extension != null)
+            {
+                footprints.add(footprintForField(extension));
+            }
+        }
+        return footprints;
+    }
+
     public static boolean register(@NotNull final IColony colony, @NotNull final BlockPos fieldPos, @NotNull final BlockPos farmerPos)
     {
         final var world = colony.getWorld();
         if (world == null || world.isClientSide)
         {
+            return false;
+        }
+
+        if (hasFieldAt(colony, fieldPos))
+        {
+            BeastofBurdenLog.warn("Cannot register duplicate field at {}", fieldPos);
             return false;
         }
 
@@ -81,7 +146,7 @@ public final class ColonyFieldSupport
         try
         {
             final Object field = Class.forName(FARM_FIELD_CLASS)
-              .getMethod("create", BlockPos.class, net.minecraft.world.level.Level.class)
+              .getMethod("create", BlockPos.class, Level.class)
               .invoke(null, fieldPos, world);
             field.getClass().getMethod("setBuilding", BlockPos.class).invoke(field, farmerPos);
 
@@ -112,6 +177,66 @@ public final class ColonyFieldSupport
     {
         final BuildingEntry farmer = ModBuildings.farmer.get();
         return farmer.getRegistryName().equals(building.getBuildingType().getRegistryName());
+    }
+
+    public static boolean isFarmField(@Nullable final IBuildingExtension extension)
+    {
+        if (extension == null)
+        {
+            return false;
+        }
+
+        if (FARM_FIELD_CLASS.equals(extension.getClass().getName()))
+        {
+            return true;
+        }
+
+        try
+        {
+            final Object extensionType = extension.getClass().getMethod("getBuildingExtensionType").invoke(extension);
+            final Object farmFieldRegistry = Class.forName(
+              "com.minecolonies.api.colony.buildingextensions.registry.BuildingExtensionRegistries"
+            ).getField("farmField").get(null);
+            if (farmFieldRegistry instanceof java.util.function.Supplier<?> supplier)
+            {
+                return extensionType != null && extensionType.equals(supplier.get());
+            }
+        }
+        catch (final ReflectiveOperationException ignored)
+        {
+        }
+
+        return false;
+    }
+
+    @NotNull
+    private static BuildingFootprint footprintForField(@NotNull final IBuildingExtension extension)
+    {
+        final BlockPos anchor = extension.getPosition();
+        int south = DEFAULT_FIELD_RANGE;
+        int west = DEFAULT_FIELD_RANGE;
+        int north = DEFAULT_FIELD_RANGE;
+        int east = DEFAULT_FIELD_RANGE;
+
+        if (FARM_FIELD_CLASS.equals(extension.getClass().getName()))
+        {
+            try
+            {
+                final Method getRadius = extension.getClass().getMethod("getRadius", Direction.class);
+                south = (int) getRadius.invoke(extension, Direction.SOUTH);
+                west = (int) getRadius.invoke(extension, Direction.WEST);
+                north = (int) getRadius.invoke(extension, Direction.NORTH);
+                east = (int) getRadius.invoke(extension, Direction.EAST);
+            }
+            catch (final ReflectiveOperationException ignored)
+            {
+            }
+        }
+
+        return BuildingFootprint.fromCorners(
+          new BlockPos(anchor.getX() - west, anchor.getY(), anchor.getZ() - north),
+          new BlockPos(anchor.getX() + east, anchor.getY(), anchor.getZ() + south)
+        );
     }
 
     private static boolean assignToFarmer(@NotNull final IBuilding farmer, @NotNull final Object field)

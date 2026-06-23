@@ -60,7 +60,7 @@ public final class PlanningConfig
 
     public static boolean instantBuildDebug()
     {
-        return Config.planningInstantBuildDebug;
+        return PlanningInstantBuildState.isEnabled();
     }
 
     private static int cooldownPasses(final int configured)

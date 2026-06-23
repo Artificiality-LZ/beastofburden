@@ -54,7 +54,7 @@ public class BeastofburdenConfigScreen extends Screen
     private static final int GENERAL_ROW_HEIGHT = GENERAL_LABEL_TO_FIELD + GENERAL_FIELD_HEIGHT + GENERAL_ROW_SPACING;
     private static final int GENERAL_FIELD_ROWS = 4;
     private static final int GENERAL_DERIVE_ROW_HEIGHT = 24;
-    private static final int GENERAL_TOGGLE_ROWS = 2;
+    private static final int GENERAL_TOGGLE_ROWS = 1;
     private static final int GENERAL_CONTENT_HEIGHT = GENERAL_ROW_HEIGHT * GENERAL_FIELD_ROWS + GENERAL_DERIVE_ROW_HEIGHT * GENERAL_TOGGLE_ROWS;
     private static final int CONFIGURED_ROW_HEIGHT = 22;
     private static final int ICON_SIZE = 16;
@@ -81,7 +81,6 @@ public class BeastofburdenConfigScreen extends Screen
     private EditBox logMaxBox;
     private EditBox logDaysBox;
     private CycleButton<Boolean> deriveRecipesButton;
-    private CycleButton<Boolean> instantBuildDebugButton;
 
     private EditBox configuredSearchBox;
     private EditBox addItemSearchBox;
@@ -208,12 +207,6 @@ public class BeastofburdenConfigScreen extends Screen
           .create(MARGIN, row, width - MARGIN * 2, 20,
             Component.translatable("com.beastofburden.config.derive_recipes"),
             (button, value) -> draft = replaceDraft(value)));
-        row += GENERAL_DERIVE_ROW_HEIGHT;
-
-        instantBuildDebugButton = addRenderableWidget(CycleButton.onOffBuilder(draft.planningInstantBuildDebug())
-          .create(MARGIN, row, width - MARGIN * 2, 20,
-            Component.translatable("com.beastofburden.config.instant_build_debug"),
-            (button, value) -> draft = replaceDraftInstantBuild(value)));
     }
 
     private void initConfiguredPage()
@@ -515,7 +508,6 @@ public class BeastofburdenConfigScreen extends Screen
           deriveRecipesButton.getValue(),
           parseInt(logMaxBox.getValue(), draft.workLogMaxEntries()),
           parseInt(logDaysBox.getValue(), draft.workLogHistoryDays()),
-          instantBuildDebugButton == null ? draft.planningInstantBuildDebug() : instantBuildDebugButton.getValue(),
           draft.itemValues()
         );
     }
@@ -546,7 +538,6 @@ public class BeastofburdenConfigScreen extends Screen
           draft.deriveFromRecipes(),
           draft.workLogMaxEntries(),
           draft.workLogHistoryDays(),
-          draft.planningInstantBuildDebug(),
           itemValues
         );
     }
@@ -562,23 +553,6 @@ public class BeastofburdenConfigScreen extends Screen
           deriveRecipes,
           draft.workLogMaxEntries(),
           draft.workLogHistoryDays(),
-          draft.planningInstantBuildDebug(),
-          draft.itemValues()
-        );
-    }
-
-    private ConfigSnapshot replaceDraftInstantBuild(final boolean instantBuildDebug)
-    {
-        return new ConfigSnapshot(
-          draft.baseGenerationTicks(),
-          draft.minGenerationTicks(),
-          draft.ticksPerItemValue(),
-          draft.strengthSpeedBonus(),
-          draft.defaultItemValue(),
-          draft.deriveFromRecipes(),
-          draft.workLogMaxEntries(),
-          draft.workLogHistoryDays(),
-          instantBuildDebug,
           draft.itemValues()
         );
     }

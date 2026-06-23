@@ -84,7 +84,7 @@ public final class ScriptedPlanningStrategy implements PlanningStrategy
     @Nullable
     public BuildTask selectNextTask(@NotNull final PlanningContext context)
     {
-        advanceCompletedSteps(context);
+         advanceCompletedSteps(context);
         if (isComplete())
         {
             return null;

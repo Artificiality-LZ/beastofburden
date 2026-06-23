@@ -7,7 +7,7 @@ import org.Artificial.beastofburden.Beastofburden;
 
 public final class ModNetwork
 {
-    private static final String PROTOCOL = "1";
+    private static final String PROTOCOL = "2";
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
       ResourceLocation.fromNamespaceAndPath(Beastofburden.MODID, "main"),
       () -> PROTOCOL,

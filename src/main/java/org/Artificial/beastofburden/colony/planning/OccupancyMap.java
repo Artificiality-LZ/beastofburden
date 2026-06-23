@@ -15,6 +15,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import org.Artificial.beastofburden.util.BeastofBurdenLog;
 import org.Artificial.beastofburden.util.ColonyBuildings;
+import org.Artificial.beastofburden.util.ColonyFieldSupport;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -112,6 +113,7 @@ public final class OccupancyMap
             BeastofBurdenLog.warn("Failed to inspect work orders for colony {} footprints: {}", colony.getID(), ex.toString());
         }
 
+        footprints.addAll(ColonyFieldSupport.collectFieldFootprints(colony));
         return footprints;
     }
 

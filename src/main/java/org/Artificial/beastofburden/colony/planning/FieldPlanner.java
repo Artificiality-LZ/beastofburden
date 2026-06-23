@@ -1,12 +1,12 @@
 package org.Artificial.beastofburden.colony.planning;
 
-import com.minecolonies.api.blocks.ModBlocks;
+import com.ldtteam.structurize.blueprints.v1.Blueprint;
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.buildings.IBuilding;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import org.Artificial.beastofburden.util.ColonyBuildings;
@@ -14,13 +14,18 @@ import org.Artificial.beastofburden.util.ColonyFieldSupport;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 /**
- * Places scarecrow fields for farmer huts.
+ * Places basicfield blueprints for farmer huts.
  */
 public final class FieldPlanner
 {
-    private static final int FIELD_SEARCH_RADIUS = 24;
     private static final int MIN_FIELD_DISTANCE = 8;
+    private static final int FIELD_CANDIDATE_STEP = 4;
+    private static final Direction FIELD_FACING = Direction.NORTH;
 
     private FieldPlanner()
     {
@@ -46,15 +51,26 @@ public final class FieldPlanner
             return null;
         }
 
-        final var reserved = OccupancyMap.collectReservedFootprint(colony);
+        final FieldBlueprintPaths.LoadedFieldBlueprint loaded = FieldBlueprintPaths.loadBasicField(colony);
+        if (loaded == null)
+        {
+            return null;
+        }
+
+        final Blueprint blueprint = loaded.blueprint();
+        final List<BuildingFootprint> reservedFootprints = OccupancyMap.collectFootprints(colony);
+        final Set<BlockPos> existingAnchors = new HashSet<>(ColonyFieldSupport.listFieldAnchors(colony));
+        final int minGap = Math.max(1, PlanningConfig.minBlueprintSeparation());
+
         BlockPos best = null;
         double bestScore = Double.NEGATIVE_INFINITY;
+        final int searchRadius = PlanningConfig.searchRadius();
 
-        for (int ring = MIN_FIELD_DISTANCE; ring <= FIELD_SEARCH_RADIUS; ring += 4)
+        for (int ring = MIN_FIELD_DISTANCE; ring <= searchRadius; ring += FIELD_CANDIDATE_STEP)
         {
-            for (int dx = -ring; dx <= ring; dx += 4)
+            for (int dx = -ring; dx <= ring; dx += FIELD_CANDIDATE_STEP)
             {
-                for (int dz = -ring; dz <= ring; dz += 4)
+                for (int dz = -ring; dz <= ring; dz += FIELD_CANDIDATE_STEP)
                 {
                     if (Math.abs(dx) < MIN_FIELD_DISTANCE && Math.abs(dz) < MIN_FIELD_DISTANCE)
                     {
@@ -66,17 +82,36 @@ public final class FieldPlanner
                     final int y = world.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
                     final BlockPos candidate = new BlockPos(x, y, z);
 
-                    if (!colony.isCoordInColony(world, candidate) || OccupancyMap.overlapsAnchor(reserved, candidate))
+                    if (!colony.isCoordInColony(world, candidate))
                     {
                         continue;
                     }
 
-                    if (!isFieldSurface(world, candidate))
+                    final BlockPos scarecrowAnchor = FieldBlueprintPaths.resolveScarecrowAnchor(blueprint, candidate, FIELD_FACING);
+                    if (existingAnchors.contains(scarecrowAnchor))
                     {
                         continue;
                     }
 
-                    final double score = scoreFieldSpot(world, candidate, farmerPos, colony.getCenter());
+                    final BuildingFootprint candidateFootprint = BuildingFootprint.fromSchematic(
+                      candidate,
+                      world,
+                      blueprint,
+                      FIELD_FACING,
+                      false
+                    );
+
+                    if (overlapsAny(candidateFootprint, reservedFootprints, minGap))
+                    {
+                        continue;
+                    }
+
+                    if (!isFieldSurface(world, scarecrowAnchor))
+                    {
+                        continue;
+                    }
+
+                    final double score = scoreFieldSpot(world, scarecrowAnchor, farmerPos, colony.getCenter());
                     if (score > bestScore)
                     {
                         bestScore = score;
@@ -98,32 +133,45 @@ public final class FieldPlanner
             return ColonyBuildingExecutor.ExecutionResult.failed("no_world");
         }
 
+        if (!(world instanceof ServerLevel server))
+        {
+            return ColonyBuildingExecutor.ExecutionResult.failed("no_world");
+        }
+
         if (!colony.isCoordInColony(world, location))
         {
             return ColonyBuildingExecutor.ExecutionResult.failed("outside_colony");
         }
 
-        final Block scarecrow = ModBlocks.blockScarecrow;
-        if (scarecrow == null)
+        final FieldBlueprintPaths.LoadedFieldBlueprint loaded = FieldBlueprintPaths.loadBasicField(colony);
+        if (loaded == null)
         {
-            return ColonyBuildingExecutor.ExecutionResult.failed("no_scarecrow_block");
+            return ColonyBuildingExecutor.ExecutionResult.failed("missing_field_blueprint");
         }
 
-        final BlockState lower = scarecrow.defaultBlockState();
-        if (!world.getBlockState(location).canBeReplaced() || !world.getBlockState(location.above()).canBeReplaced())
+        final Blueprint blueprint = loaded.blueprint();
+        final BlockPos scarecrowAnchor = FieldBlueprintPaths.resolveScarecrowAnchor(blueprint, location, FIELD_FACING);
+        if (ColonyFieldSupport.hasFieldAt(colony, scarecrowAnchor))
+        {
+            return ColonyBuildingExecutor.ExecutionResult.failed("field_already_exists");
+        }
+
+        if (!OccupancyMap.prepareAnchorSite(world, location))
         {
             return ColonyBuildingExecutor.ExecutionResult.failed("blocked");
         }
 
-        world.setBlockAndUpdate(location, lower);
-        world.setBlockAndUpdate(location.above(), lower);
+        if (!PlanningInstantBuild.pasteBlueprint(server, location, blueprint, FIELD_FACING))
+        {
+            return ColonyBuildingExecutor.ExecutionResult.failed("field_paste_failed");
+        }
 
-        if (!ColonyFieldSupport.register(colony, location, farmerPos))
+        if (!ColonyFieldSupport.register(colony, scarecrowAnchor, farmerPos))
         {
             return ColonyBuildingExecutor.ExecutionResult.failed("field_registration_failed");
         }
 
-        return ColonyBuildingExecutor.ExecutionResult.success(location, PlannedBuildingType.FARMER, "farmer_field");
+        return ColonyBuildingExecutor.ExecutionResult.success(scarecrowAnchor, PlannedBuildingType.FARMER, "farmer_field");
     }
 
     @Nullable
@@ -142,6 +190,21 @@ public final class FieldPlanner
             }
         }
         return null;
+    }
+
+    private static boolean overlapsAny(
+      @NotNull final BuildingFootprint candidate,
+      @NotNull final List<BuildingFootprint> existing,
+      final int minGap)
+    {
+        for (final BuildingFootprint footprint : existing)
+        {
+            if (candidate.conflictsWith(footprint, minGap))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isFarmerHut(@NotNull final IBuilding building)
