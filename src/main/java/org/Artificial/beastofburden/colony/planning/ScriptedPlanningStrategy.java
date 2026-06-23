@@ -48,6 +48,12 @@ public final class ScriptedPlanningStrategy implements PlanningStrategy
         clampStepIndex();
     }
 
+    public void resetProgress()
+    {
+        currentStepIndex = 0;
+        clampStepIndex();
+    }
+
     @NotNull
     public FixedPlanScript getScript()
     {

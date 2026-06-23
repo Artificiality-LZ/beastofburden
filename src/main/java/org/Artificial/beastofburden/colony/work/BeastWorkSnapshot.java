@@ -2,11 +2,12 @@ package org.Artificial.beastofburden.colony.work;
 
 import net.minecraft.network.FriendlyByteBuf;
 import org.Artificial.beastofburden.colony.planning.ColonyPhase;
+import org.Artificial.beastofburden.colony.planning.FixedPlanScript;
+import org.Artificial.beastofburden.colony.planning.PlanScriptIO;
 import org.Artificial.beastofburden.colony.planning.PlanningMode;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -15,7 +16,18 @@ import java.util.List;
 public final class BeastWorkSnapshot
 {
     public static final BeastWorkSnapshot EMPTY = new BeastWorkSnapshot(
-      0, 0, List.of(), List.of(), false, PlanningMode.HEURISTIC, 0, 0, ColonyPhase.P0_FOUNDATION, "", ""
+      0,
+      0,
+      List.of(),
+      List.of(),
+      false,
+      PlanningMode.HEURISTIC,
+      0,
+      0,
+      ColonyPhase.P0_FOUNDATION,
+      "",
+      "",
+      FixedPlanScript.createDefault()
     );
 
     private final int colonyDay;
@@ -29,6 +41,8 @@ public final class BeastWorkSnapshot
     private final ColonyPhase planningPhase;
     private final String planningLastDecision;
     private final String planningDetail;
+    @NotNull
+    private final FixedPlanScript planScript;
 
     public BeastWorkSnapshot(
       final int colonyDay,
@@ -41,7 +55,8 @@ public final class BeastWorkSnapshot
       final int scriptedStepCount,
       @NotNull final ColonyPhase planningPhase,
       @NotNull final String planningLastDecision,
-      @NotNull final String planningDetail)
+      @NotNull final String planningDetail,
+      @NotNull final FixedPlanScript planScript)
     {
         this.colonyDay = colonyDay;
         this.historyDays = historyDays;
@@ -54,6 +69,7 @@ public final class BeastWorkSnapshot
         this.planningPhase = planningPhase;
         this.planningLastDecision = planningLastDecision;
         this.planningDetail = planningDetail;
+        this.planScript = planScript;
     }
 
     public int getColonyDay()
@@ -118,6 +134,12 @@ public final class BeastWorkSnapshot
     }
 
     @NotNull
+    public FixedPlanScript getPlanScript()
+    {
+        return planScript;
+    }
+
+    @NotNull
     public static BeastWorkSnapshot read(@NotNull final FriendlyByteBuf buf)
     {
         final int colonyDay = buf.readVarInt();
@@ -143,7 +165,8 @@ public final class BeastWorkSnapshot
         final int scriptedStepCount = buf.readVarInt();
         final ColonyPhase phase = ColonyPhase.fromId(buf.readByte());
         final String lastDecision = buf.readUtf();
-        final String planningDetail = buf.readableBytes() > 0 ? buf.readUtf() : "";
+        final String planningDetail = buf.readUtf();
+        final FixedPlanScript planScript = buf.isReadable() ? PlanScriptIO.read(buf) : FixedPlanScript.createDefault();
 
         return new BeastWorkSnapshot(
           colonyDay,
@@ -156,7 +179,8 @@ public final class BeastWorkSnapshot
           scriptedStepCount,
           phase,
           lastDecision,
-          planningDetail
+          planningDetail,
+          planScript
         );
     }
 
@@ -181,5 +205,6 @@ public final class BeastWorkSnapshot
         buf.writeByte(planningPhase.ordinal());
         buf.writeUtf(planningLastDecision);
         buf.writeUtf(planningDetail);
+        PlanScriptIO.write(buf, planScript);
     }
 }

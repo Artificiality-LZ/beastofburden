@@ -10,6 +10,7 @@ import com.minecolonies.core.Network;
 import com.minecolonies.core.client.gui.WindowHireWorker;
 import com.minecolonies.core.client.gui.modules.building.SpecialAssignmentModuleWindow;
 import com.minecolonies.core.network.messages.server.colony.building.MarkBuildingDirtyMessage;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -20,6 +21,9 @@ import org.Artificial.beastofburden.network.CyclePlanningModeMessage;
 import org.Artificial.beastofburden.network.ToggleAutonomousPlanningMessage;
 import org.Artificial.beastofburden.colony.buildings.modules.TownHallBeastofburdenModuleView;
 import org.Artificial.beastofburden.colony.planning.ColonyPhase;
+import org.Artificial.beastofburden.colony.planning.FixedPlanScript;
+import org.Artificial.beastofburden.colony.planning.FixedPlanStep;
+import org.Artificial.beastofburden.colony.planning.PlanStepFormatter;
 import org.Artificial.beastofburden.colony.planning.PlanningMode;
 import org.Artificial.beastofburden.colony.work.BeastWorkLogAction;
 import org.Artificial.beastofburden.colony.work.BeastWorkLogEntry;
@@ -54,6 +58,7 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
     private static final String BUTTON_HIRE = "hire";
     private static final String BUTTON_TOGGLE_PLANNING = "togglePlanning";
     private static final String BUTTON_CYCLE_PLANNING_MODE = "cyclePlanningMode";
+    private static final String BUTTON_EDIT_PLAN = "editPlan";
     private static final String LABEL_PLANNING_STATUS = "planningStatus";
     private static final String LABEL_PLANNING_DETAIL = "planningDetail";
 
@@ -67,6 +72,7 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
         registerButton(BUTTON_HIRE, this::hireClicked);
         registerButton(BUTTON_TOGGLE_PLANNING, this::togglePlanningClicked);
         registerButton(BUTTON_CYCLE_PLANNING_MODE, this::cyclePlanningModeClicked);
+        registerButton(BUTTON_EDIT_PLAN, this::editPlanClicked);
     }
 
     /**
@@ -84,6 +90,7 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
         registerButton(BUTTON_HIRE, this::hireClicked);
         registerButton(BUTTON_TOGGLE_PLANNING, this::togglePlanningClicked);
         registerButton(BUTTON_CYCLE_PLANNING_MODE, this::cyclePlanningModeClicked);
+        registerButton(BUTTON_EDIT_PLAN, this::editPlanClicked);
         super.onOpened();
         refreshWorkPanels();
     }
@@ -99,6 +106,15 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
     {
         ModNetwork.CHANNEL.sendToServer(new CyclePlanningModeMessage(buildingView.getPosition()));
         refreshPlanningModeButton(moduleView.getPlanningMode().next());
+    }
+
+    private void editPlanClicked(@NotNull final Button button)
+    {
+        Minecraft.getInstance().setScreen(new BeastofburdenPlanEditorScreen(
+          Minecraft.getInstance().screen,
+          buildingView,
+          moduleView.getPlanScript()
+        ));
     }
 
     @Override
@@ -129,7 +145,8 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
           snapshot.getPlanningPhase(),
           snapshot.getPlanningLastDecision(),
           snapshot.getPlanningDetail(),
-          snapshot.isAutonomousPlanningEnabled()
+          snapshot.isAutonomousPlanningEnabled(),
+          snapshot.getPlanScript()
         );
 
         final Text historyNote = findPaneOfTypeByID(LABEL_HISTORY_NOTE, Text.class);
@@ -163,6 +180,14 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
             ));
         }
         refreshPlanningModeButton(mode);
+
+        final Button editPlan = findPaneOfTypeByID(BUTTON_EDIT_PLAN, Button.class);
+        if (editPlan != null)
+        {
+            final boolean scripted = mode == PlanningMode.SCRIPTED;
+            editPlan.setVisible(scripted);
+            editPlan.setEnabled(scripted);
+        }
     }
 
     private void refreshPlanningModeButton(@NotNull final PlanningMode mode)
@@ -185,7 +210,8 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
       @NotNull final ColonyPhase phase,
       @NotNull final String lastDecision,
       @NotNull final String planningDetail,
-      final boolean enabled)
+      final boolean enabled,
+      @NotNull final FixedPlanScript planScript)
     {
         final Text status = findPaneOfTypeByID(LABEL_PLANNING_STATUS, Text.class);
         final Text detail = findPaneOfTypeByID(LABEL_PLANNING_DETAIL, Text.class);
@@ -206,6 +232,7 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
 
         if (mode == PlanningMode.SCRIPTED)
         {
+            final Component stepDescription = describeScriptedStep(planScript, scriptedStepIndex);
             if (scriptedStepIndex >= scriptedStepCount && scriptedStepCount > 0)
             {
                 status.setText(Component.translatable("com.beastofburden.gui.townhall.scripted.complete"));
@@ -216,7 +243,7 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
                   "com.beastofburden.gui.townhall.scripted.step",
                   scriptedStepIndex + 1,
                   scriptedStepCount,
-                  Component.translatable(scriptedStepKey(scriptedStepIndex))
+                  stepDescription
                 ));
             }
             else
@@ -225,7 +252,7 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
                   "com.beastofburden.gui.townhall.scripted.status",
                   scriptedStepIndex + 1,
                   scriptedStepCount,
-                  Component.translatable(scriptedStepKey(scriptedStepIndex)),
+                  stepDescription,
                   resolvePlanningDecision(lastDecision)
                 ));
             }
@@ -261,9 +288,15 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
     }
 
     @NotNull
-    private static String scriptedStepKey(final int stepIndex)
+    private static Component describeScriptedStep(@NotNull final FixedPlanScript planScript, final int stepIndex)
     {
-        return "com.beastofburden.gui.townhall.scripted.step." + (stepIndex + 1);
+        if (stepIndex < 0 || stepIndex >= planScript.stepCount())
+        {
+            return Component.empty();
+        }
+
+        final FixedPlanStep step = planScript.getStep(stepIndex);
+        return PlanStepFormatter.formatStep(step);
     }
 
     @NotNull

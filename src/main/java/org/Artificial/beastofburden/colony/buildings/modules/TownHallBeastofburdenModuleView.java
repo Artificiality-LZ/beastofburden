@@ -11,6 +11,7 @@ import net.minecraft.resources.ResourceLocation;
 import org.Artificial.beastofburden.client.gui.BeastofburdenModuleWindow;
 import org.Artificial.beastofburden.colony.jobs.BeastofburdenJobs;
 import org.Artificial.beastofburden.colony.planning.ColonyPhase;
+import org.Artificial.beastofburden.colony.planning.FixedPlanScript;
 import org.Artificial.beastofburden.colony.planning.PlanningMode;
 import org.Artificial.beastofburden.colony.work.BeastWorkSnapshot;
 import org.jetbrains.annotations.NotNull;
@@ -121,6 +122,12 @@ public class TownHallBeastofburdenModuleView extends WorkerBuildingModuleView
     public BeastWorkSnapshot getWorkSnapshot()
     {
         return workSnapshot;
+    }
+
+    @NotNull
+    public FixedPlanScript getPlanScript()
+    {
+        return workSnapshot.getPlanScript();
     }
 
     @Override

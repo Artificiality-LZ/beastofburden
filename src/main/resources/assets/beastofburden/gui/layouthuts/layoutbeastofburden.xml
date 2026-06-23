@@ -1,5 +1,5 @@
-<window size="190 338" pause="false" lightbox="false">
-    <image source="minecolonies:textures/gui/builderhut/builder_paper.png" size="190 338"/>
+<window size="190 352" pause="false" lightbox="false">
+    <image source="minecolonies:textures/gui/builderhut/builder_paper.png" size="190 352"/>
     <label size="164 11" pos="13 14" textalign="MIDDLE" color="black"
            label="$(com.beastofburden.gui.townhall.workers)"/>
 
@@ -24,12 +24,15 @@
     <buttonimage id="cyclePlanningMode" size="129 17" pos="30 106" textcolor="black"
                  source="minecolonies:textures/gui/builderhut/builder_button_medium_large.png"
                  label="$(com.beastofburden.gui.townhall.planning_mode.heuristic)"/>
-    <label id="planningStatus" size="164 10" pos="13 124" textalign="MIDDLE" color="black" textscale="0.85"/>
-    <label id="planningDetail" size="164 18" pos="13 134" textalign="MIDDLE" color="black" textscale="0.75"/>
+    <buttonimage id="editPlan" size="129 17" pos="30 124" textcolor="black"
+                 source="minecolonies:textures/gui/builderhut/builder_button_medium_large.png"
+                 label="$(com.beastofburden.gui.townhall.edit_plan)"/>
+    <label id="planningStatus" size="164 10" pos="13 142" textalign="MIDDLE" color="black" textscale="0.85"/>
+    <label id="planningDetail" size="164 18" pos="13 152" textalign="MIDDLE" color="black" textscale="0.75"/>
 
-    <label id="activeTitle" size="164 11" pos="13 154" textalign="MIDDLE" color="black"
+    <label id="activeTitle" size="164 11" pos="13 172" textalign="MIDDLE" color="black"
            label="$(com.beastofburden.gui.townhall.active_work)"/>
-    <list id="activeWork" size="164 52" pos="13 165">
+    <list id="activeWork" size="164 48" pos="13 183">
         <view size="100% 26">
             <box size="100% 26" linewidth="0">
                 <itemicon id="activeIcon" size="14 14" pos="2 6"/>
@@ -40,10 +43,10 @@
         </view>
     </list>
 
-    <label id="historyTitle" size="164 11" pos="13 221" textalign="MIDDLE" color="black"
+    <label id="historyTitle" size="164 11" pos="13 235" textalign="MIDDLE" color="black"
            label="$(com.beastofburden.gui.townhall.work_history)"/>
-    <label id="historyNote" size="164 9" pos="13 232" textalign="MIDDLE" color="black" textscale="0.85"/>
-    <list id="history" size="164 86" pos="13 243">
+    <label id="historyNote" size="164 9" pos="13 246" textalign="MIDDLE" color="black" textscale="0.85"/>
+    <list id="history" size="164 86" pos="13 257">
         <view size="100% 24">
             <box size="100% 24" linewidth="0">
                 <itemicon id="historyIcon" size="14 14" pos="2 5"/>

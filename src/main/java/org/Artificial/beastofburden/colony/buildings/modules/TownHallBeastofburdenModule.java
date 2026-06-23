@@ -21,6 +21,8 @@ import org.Artificial.beastofburden.colony.jobs.JobBeastofburden;
 import org.Artificial.beastofburden.colony.planning.ColonyPlanner;
 import org.Artificial.beastofburden.colony.planning.ColonyPlannerDriver;
 import org.Artificial.beastofburden.colony.planning.ColonyPhase;
+import org.Artificial.beastofburden.colony.planning.FixedPlanScript;
+import org.Artificial.beastofburden.colony.planning.PlanScriptValidator;
 import org.Artificial.beastofburden.colony.planning.PlanningMode;
 import org.Artificial.beastofburden.colony.work.BeastWorkLogEntry;
 import org.Artificial.beastofburden.colony.work.BeastWorkSnapshot;
@@ -287,6 +289,34 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
         setPlanningMode(colonyPlanner.getPlanningMode().next());
     }
 
+    /**
+     * Applies a player-edited scripted plan after server-side validation.
+     */
+    public boolean applyPlanScript(@NotNull final FixedPlanScript submitted)
+    {
+        final FixedPlanScript validated = PlanScriptValidator.validate(submitted);
+        if (validated == null)
+        {
+            return false;
+        }
+
+        final boolean changed = !PlanScriptValidator.contentEquals(
+          colonyPlanner.getScriptedStrategy().getScript(),
+          validated
+        );
+
+        colonyPlanner.getScriptedStrategy().setScript(validated);
+        if (changed)
+        {
+            colonyPlanner.getScriptedStrategy().resetProgress();
+            colonyPlanner.setLastDecision("");
+            colonyPlanner.getReport().clear();
+        }
+
+        markDirty();
+        return true;
+    }
+
     public void setAutonomousPlanningEnabled(final boolean enabled)
     {
         if (autonomousPlanningEnabled != enabled)
@@ -372,7 +402,8 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
           colonyPlanner.getScriptedStrategy().getStepCount(),
           getSyncedPhase(),
           syncedLastDecision,
-          syncedPlanningDetail
+          syncedPlanningDetail,
+          colonyPlanner.getScriptedStrategy().getScript()
         );
     }
 
