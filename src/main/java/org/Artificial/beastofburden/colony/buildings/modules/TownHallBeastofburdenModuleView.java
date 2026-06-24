@@ -29,7 +29,7 @@ public class TownHallBeastofburdenModuleView extends WorkerBuildingModuleView
     private BeastWorkSnapshot workSnapshot = BeastWorkSnapshot.EMPTY;
     private boolean workUpdated = true;
     private boolean autonomousPlanningEnabled;
-    private PlanningMode planningMode = PlanningMode.HEURISTIC;
+    private PlanningMode planningMode = PlanningMode.DEFAULT;
     private int scriptedStepIndex;
     private int scriptedStepCount;
     private ColonyPhase planningPhase = ColonyPhase.P0_FOUNDATION;

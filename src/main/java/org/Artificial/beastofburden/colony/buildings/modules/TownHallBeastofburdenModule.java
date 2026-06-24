@@ -495,7 +495,7 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
               plannerTag.contains("debug", Tag.TAG_COMPOUND) ? plannerTag.getCompound("debug") : null,
               plannerTag.contains("blocklist", Tag.TAG_COMPOUND) ? plannerTag.getCompound("blocklist") : null,
               world == null ? 0L : world.getGameTime(),
-              plannerTag.contains("planningMode") ? plannerTag.getInt("planningMode") : PlanningMode.HEURISTIC.ordinal(),
+              plannerTag.contains("planningMode") ? plannerTag.getInt("planningMode") : PlanningMode.DEFAULT.ordinal(),
               plannerTag.contains("scripted", Tag.TAG_COMPOUND) ? plannerTag.getCompound("scripted") : null
             );
             colonyPlanner.syncBootstrapState(building.getColony());

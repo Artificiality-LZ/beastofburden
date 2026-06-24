@@ -23,7 +23,7 @@
                  label="$(com.beastofburden.gui.townhall.planning_off)"/>
     <buttonimage id="cyclePlanningMode" size="129 17" pos="30 106" textcolor="black"
                  source="minecolonies:textures/gui/builderhut/builder_button_medium_large.png"
-                 label="$(com.beastofburden.gui.townhall.planning_mode.heuristic)"/>
+                 label="$(com.beastofburden.gui.townhall.planning_mode.scripted)"/>
     <buttonimage id="editPlan" size="129 17" pos="30 124" textcolor="black"
                  source="minecolonies:textures/gui/builderhut/builder_button_medium_large.png"
                  label="$(com.beastofburden.gui.townhall.edit_plan)"/>

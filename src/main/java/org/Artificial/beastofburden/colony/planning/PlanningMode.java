@@ -7,15 +7,17 @@ import org.jetbrains.annotations.NotNull;
  */
 public enum PlanningMode
 {
-    /** Weighted scoring over colony phase (CDAI tactical layer). */
+    /** Weighted scoring over colony phase (experimental). */
     HEURISTIC,
     /** Fixed step sequence from {@link FixedPlanScript}. */
     SCRIPTED;
 
+    public static final PlanningMode DEFAULT = SCRIPTED;
+
     public static PlanningMode fromId(final int id)
     {
         final PlanningMode[] values = values();
-        return id >= 0 && id < values.length ? values[id] : HEURISTIC;
+        return id >= 0 && id < values.length ? values[id] : DEFAULT;
     }
 
     @NotNull

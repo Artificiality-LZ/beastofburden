@@ -65,7 +65,7 @@
   "com.beastofburden.gui.townhall.planning.no_builder": "No builder available",
   "com.beastofburden.gui.townhall.planning.cooldown": "Retrying soon",
   "com.beastofburden.gui.townhall.planning.cooldown_ticks": "Next plan in %1$s ticks",
-  "com.beastofburden.gui.townhall.planning_mode.heuristic": "Planning Mode: Heuristic",
+  "com.beastofburden.gui.townhall.planning_mode.heuristic": "Planning Mode: Heuristic (Experimental)",
   "com.beastofburden.gui.townhall.planning_mode.scripted": "Planning Mode: Scripted",
   "com.beastofburden.gui.townhall.edit_plan": "Edit Build Plan",
   "com.beastofburden.gui.plan_editor.title": "Colony Build Plan",

@@ -11,7 +11,6 @@ import net.minecraftforge.fml.common.Mod;
 import org.Artificial.beastofburden.Beastofburden;
 import org.Artificial.beastofburden.util.BeastofBurdenLog;
 import org.Artificial.beastofburden.util.BeastofBurdenRequestQueue;
-import org.Artificial.beastofburden.util.ColonyLogistics;
 import org.Artificial.beastofburden.util.RequestItemUtils;
 import org.Artificial.beastofburden.util.UnfulfillableRequestDetector;
 import org.jetbrains.annotations.NotNull;
@@ -59,7 +58,7 @@ public final class ColonyRequestEventHandler
                 continue;
             }
 
-            scanColony(colony, tickCounter, false);
+            scanColony(colony, tickCounter);
         }
     }
 
@@ -74,37 +73,28 @@ public final class ColonyRequestEventHandler
             return;
         }
 
-        scanColony(colony, tickCounter, true);
+        scanColony(colony, tickCounter);
     }
 
-    private static void scanColony(@NotNull final IColony colony, final int currentTick, final boolean triggeredByBeast)
+    private static void scanColony(@NotNull final IColony colony, final int currentTick)
     {
         LAST_SCAN_TICK.put(colony.getID(), currentTick);
         final BeastofBurdenRequestQueue queue = COLONY_QUEUES.computeIfAbsent(colony.getID(), id -> new BeastofBurdenRequestQueue());
         queue.purgeInvalid(colony);
 
         final Collection<IRequest<?>> candidates = UnfulfillableRequestDetector.getAllRequests(colony);
-        int unfulfillable = 0;
-        int withStack = 0;
-        int added = 0;
-        int skippedNotUnfulfillable = 0;
-        int skippedNoStack = 0;
 
         for (final IRequest<?> request : candidates)
         {
             if (!UnfulfillableRequestDetector.isUnfulfillable(colony, request))
             {
-                skippedNotUnfulfillable++;
                 BeastofBurdenLog.info("Colony {} skip (not unfulfillable): {}", colony.getID(), UnfulfillableRequestDetector.explain(colony, request));
                 continue;
             }
 
-            unfulfillable++;
-
             final ItemStack stack = RequestItemUtils.extractItemStack(request);
             if (stack.isEmpty())
             {
-                skippedNoStack++;
                 BeastofBurdenLog.info(
                   "Colony {} skip (no item stack): {} requestable={}",
                   colony.getID(),
@@ -114,13 +104,10 @@ public final class ColonyRequestEventHandler
                 continue;
             }
 
-            withStack++;
-
             final int sizeBefore = queue.size();
             queue.addRequest(request);
             if (queue.size() > sizeBefore)
             {
-                added++;
                 LOGGER.info(
                   "[{}] Colony {}: queued request for {} x{}.",
                   Beastofburden.MODID,
@@ -129,38 +116,6 @@ public final class ColonyRequestEventHandler
                   stack.getCount()
                 );
                 BeastofBurdenLog.info("Colony {} queued: {}", colony.getID(), UnfulfillableRequestDetector.explain(colony, request));
-            }
-        }
-
-        if (triggeredByBeast || added > 0 || candidates.isEmpty())
-        {
-            final int rawOpen = ColonyLogistics.countAllOpenRequests(colony);
-            BeastofBurdenLog.info(
-              "Colony {} scan (beast={}): candidates={} rawOpen={} warehouse={} deliveryman={} earlyLogistics={} unfulfillable={} withStack={} added={} skipUnfulfillable={} skipNoStack={} queueSize={} playerAssigned={} retryingAssigned={}",
-              colony.getID(),
-              triggeredByBeast,
-              candidates.size(),
-              rawOpen,
-              ColonyLogistics.hasWarehouse(colony),
-              ColonyLogistics.hasActiveDeliveryman(colony),
-              ColonyLogistics.isEarlyLogistics(colony),
-              unfulfillable,
-              withStack,
-              added,
-              skippedNotUnfulfillable,
-              skippedNoStack,
-              queue.size(),
-              colony.getRequestManager().getPlayerResolver().getAllAssignedRequests().size(),
-              colony.getRequestManager().getRetryingRequestResolver().getAllAssignedRequests().size()
-            );
-
-            if (rawOpen > 0 && candidates.isEmpty())
-            {
-                BeastofBurdenLog.warn(
-                  "Colony {} has {} open building requests but scan found 0 candidates — check request manager linkage.",
-                  colony.getID(),
-                  rawOpen
-                );
             }
         }
     }

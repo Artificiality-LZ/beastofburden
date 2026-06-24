@@ -65,7 +65,7 @@
   "com.beastofburden.gui.townhall.planning.no_builder": "无可用建造者",
   "com.beastofburden.gui.townhall.planning.cooldown": "稍后重试",
   "com.beastofburden.gui.townhall.planning.cooldown_ticks": "下次规划：剩余 %1$s tick",
-  "com.beastofburden.gui.townhall.planning_mode.heuristic": "规划模式：启发式",
+  "com.beastofburden.gui.townhall.planning_mode.heuristic": "规划模式：启发式（实验性）",
   "com.beastofburden.gui.townhall.planning_mode.scripted": "规划模式：固定式",
   "com.beastofburden.gui.townhall.edit_plan": "编辑建造计划",
   "com.beastofburden.gui.plan_editor.title": "殖民地建造计划",

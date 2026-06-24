@@ -21,7 +21,7 @@ public final class BeastWorkSnapshot
       List.of(),
       List.of(),
       false,
-      PlanningMode.HEURISTIC,
+      PlanningMode.DEFAULT,
       0,
       0,
       ColonyPhase.P0_FOUNDATION,

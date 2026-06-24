@@ -16,7 +16,7 @@ public final class ColonyPlanner
     private final ScriptedPlanningStrategy scriptedStrategy = new ScriptedPlanningStrategy();
     private final PlanningReport report = new PlanningReport();
 
-    private PlanningMode planningMode = PlanningMode.HEURISTIC;
+    private PlanningMode planningMode = PlanningMode.DEFAULT;
     private int retryCooldown;
     private String lastDecision = "";
 
