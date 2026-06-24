@@ -188,6 +188,28 @@ public final class OccupancyMap
      */
     public static boolean prepareAnchorSite(@NotNull final Level world, @NotNull final BlockPos anchor)
     {
+        return prepareAnchorSite(world, anchor, null);
+    }
+
+    /**
+     * Clears the hut anchor (and optional ground floor cell for elevated hut blocks).
+     *
+     * @return false when a non-clearable block remains at a required cell.
+     */
+    public static boolean prepareAnchorSite(
+      @NotNull final Level world,
+      @NotNull final BlockPos anchor,
+      @Nullable final Blueprint blueprint)
+    {
+        if (blueprint != null && BlueprintAnchorOffsets.hutVerticalOffset(blueprint) > 0)
+        {
+            final BlockPos groundColumn = BlueprintAnchorOffsets.groundColumnFromAnchor(anchor, blueprint);
+            if (!clearAnchorCell(world, groundColumn))
+            {
+                return false;
+            }
+        }
+
         if (!clearAnchorCell(world, anchor))
         {
             return false;
@@ -225,12 +247,27 @@ public final class OccupancyMap
       @NotNull final BlockPos anchor,
       @NotNull final Set<BlockPos> reserved)
     {
+        return isLooseAnchorCandidate(world, anchor, null, reserved);
+    }
+
+    /**
+     * Loose anchor check using blueprint ground column for support below the floor.
+     */
+    public static boolean isLooseAnchorCandidate(
+      @NotNull final Level world,
+      @NotNull final BlockPos anchor,
+      @Nullable final Blueprint blueprint,
+      @NotNull final Set<BlockPos> reserved)
+    {
         if (overlapsAnchor(reserved, anchor))
         {
             return false;
         }
 
-        final BlockState below = world.getBlockState(anchor.below());
+        final BlockPos supportColumn = blueprint == null
+          ? anchor
+          : BlueprintAnchorOffsets.groundColumnFromAnchor(anchor, blueprint);
+        final BlockState below = world.getBlockState(supportColumn.below());
         return !below.isAir()
           && !below.getFluidState().is(net.minecraft.world.level.material.Fluids.WATER)
           && !below.getFluidState().is(net.minecraft.world.level.material.Fluids.LAVA);

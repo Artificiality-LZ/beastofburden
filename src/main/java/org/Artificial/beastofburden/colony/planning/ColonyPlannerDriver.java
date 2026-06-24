@@ -35,6 +35,12 @@ public final class ColonyPlannerDriver
         final ColonyPlanner planner = module.getColonyPlanner();
         final String coldStartNote = ColdStartManager.tick(colony);
 
+        if (module.getAssignedCitizen().isEmpty())
+        {
+            syncWaiting(module, planner, "no_assigned_beast", "");
+            return;
+        }
+
         if (!PlanningWorkload.hasIdleBeast(module))
         {
             syncWaiting(module, planner, "beast_busy", PlanningWorkload.describeBeastBlockers(module));
@@ -152,17 +158,6 @@ public final class ColonyPlannerDriver
     @NotNull
     private static String formatDetail(@NotNull final ColonyPlanner.PlanningResult result)
     {
-        return result.task().getAction().name()
-          + " "
-          + result.task().getType().getSchematicId()
-          + " @ "
-          + result.location().getX()
-          + ","
-          + result.location().getY()
-          + ","
-          + result.location().getZ()
-          + " ("
-          + (result.task().getReason() == null ? "" : result.task().getReason())
-          + ")";
+        return PlanningDisplayFormatter.formatPlannedToken(result.task());
     }
 }

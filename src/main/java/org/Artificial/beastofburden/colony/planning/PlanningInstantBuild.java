@@ -27,7 +27,9 @@ import java.util.UUID;
 import static com.ldtteam.structurize.placement.AbstractBlueprintIterator.NULL_POS;
 
 /**
- * Instantly pastes hut blueprints for planning debug mode (no builder work orders).
+ * Instantly completes hut blueprints for planning debug mode (no builder work orders).
+ * Uses creative "pretty" placement ({@code fancyPlacement = true}) so substitution blocks resolve
+ * to real materials instead of structural placeholders.
  */
 public final class PlanningInstantBuild
 {
@@ -84,7 +86,7 @@ public final class PlanningInstantBuild
         {
             final Rotation rotation = BlockPosUtil.getRotationFromRotations(facingToRotations(facing));
             final PlacementSettings settings = new PlacementSettings(Mirror.NONE, rotation);
-            final IStructureHandler handler = new CreativeBuildingStructureHandler(world, location, blueprint, settings, false);
+            final IStructureHandler handler = new CreativeBuildingStructureHandler(world, location, blueprint, settings, true);
             if (!handler.hasBluePrint())
             {
                 return false;

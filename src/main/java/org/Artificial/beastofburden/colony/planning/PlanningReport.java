@@ -51,7 +51,7 @@ public final class PlanningReport
     {
         fillTask(task);
         decision = "planning";
-        this.detail = detail;
+        this.detail = "";
     }
 
     public void placed(
@@ -61,11 +61,11 @@ public final class PlanningReport
       @Nullable final String note)
     {
         fillTask(task);
-        decision = task.getType().getSchematicId() + "@" + location.toShortString();
+        decision = PlanningDisplayFormatter.formatPlannedToken(task);
         this.location = location.toShortString();
         this.builder = builder.equals(BlockPos.ZERO) ? "auto" : builder.toShortString();
         this.note = note == null ? "" : note;
-        detail = formatSummary();
+        detail = "";
     }
 
     public void failed(@NotNull final String decision, @NotNull final BuildTask task, @NotNull final String note)
@@ -73,7 +73,7 @@ public final class PlanningReport
         fillTask(task);
         this.decision = decision;
         this.note = note;
-        detail = formatSummary();
+        detail = "";
     }
 
     private void fillTask(@NotNull final BuildTask task)
@@ -92,7 +92,7 @@ public final class PlanningReport
     @NotNull
     public String getDetail()
     {
-        return detail.isEmpty() ? formatSummary() : detail;
+        return detail;
     }
 
     @NotNull

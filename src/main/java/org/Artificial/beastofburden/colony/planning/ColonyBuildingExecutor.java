@@ -80,6 +80,17 @@ public final class ColonyBuildingExecutor
             }
 
             building.requestUpgrade(null, builderPos);
+            if (!PlanningWorkOrders.hasConstructionOrderAt(colony, buildingPos))
+            {
+                BeastofBurdenLog.warn(
+                  "Upgrade requested at {} to level {} but no work order was created (builder {}).",
+                  buildingPos,
+                  task.getTargetLevel(),
+                  builderPos
+                );
+                return ExecutionResult.failed("upgrade_failed");
+            }
+
             return ExecutionResult.success(buildingPos, task.getType(), "upgrade");
         }
         catch (final Exception ex)
@@ -135,7 +146,8 @@ public final class ColonyBuildingExecutor
             return ExecutionResult.failed("missing_pack");
         }
 
-        if (!OccupancyMap.prepareAnchorSite(world, location))
+        final Blueprint blueprint = BlueprintPaths.loadBlueprint(pack, task.getType(), task.getTargetLevel());
+        if (!OccupancyMap.prepareAnchorSite(world, location, blueprint))
         {
             return ExecutionResult.failed("blocked_anchor");
         }

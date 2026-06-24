@@ -403,6 +403,7 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
           getSyncedPhase(),
           syncedLastDecision,
           syncedPlanningDetail,
+          colonyPlanner.getRetryCooldown(),
           colonyPlanner.getScriptedStrategy().getScript()
         );
     }

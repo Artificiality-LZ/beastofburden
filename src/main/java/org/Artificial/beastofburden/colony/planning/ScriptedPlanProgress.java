@@ -110,7 +110,7 @@ public final class ScriptedPlanProgress
             return false;
         }
 
-        if (building.getBuildingLevel() >= minLevel || building.isBuilt())
+        if (building.getBuildingLevel() >= minLevel)
         {
             return true;
         }

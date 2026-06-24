@@ -48,7 +48,7 @@ public final class PlacementSearch
             return null;
         }
 
-        final List<Candidate> candidates = collectCandidates(context, type);
+        final List<Candidate> candidates = collectCandidates(context, type, blueprint);
         candidates.sort(Comparator.comparingDouble(Candidate::baseScore).reversed());
 
         Placement best = null;
@@ -73,7 +73,8 @@ public final class PlacementSearch
     @NotNull
     private static List<Candidate> collectCandidates(
       @NotNull final PlanningContext context,
-      @NotNull final PlannedBuildingType type)
+      @NotNull final PlannedBuildingType type,
+      @NotNull final Blueprint blueprint)
     {
         final Level world = context.colony().getWorld();
         if (world == null)
@@ -98,13 +99,13 @@ public final class PlacementSearch
                     continue;
                 }
 
-                final BlockPos anchor = surfaceAnchor(context, center.getX() + dx, center.getZ() + dz);
+                final BlockPos anchor = surfaceAnchor(context, blueprint, center.getX() + dx, center.getZ() + dz);
                 if (anchor == null)
                 {
                     continue;
                 }
 
-                candidates.add(new Candidate(anchor, baseScore(context, type, anchor)));
+                candidates.add(new Candidate(anchor, baseScore(context, type, blueprint, anchor)));
             }
         }
 
@@ -112,7 +113,11 @@ public final class PlacementSearch
     }
 
     @Nullable
-    private static BlockPos surfaceAnchor(@NotNull final PlanningContext context, final int x, final int z)
+    private static BlockPos surfaceAnchor(
+      @NotNull final PlanningContext context,
+      @NotNull final Blueprint blueprint,
+      final int x,
+      final int z)
     {
         final Level world = context.colony().getWorld();
         if (world == null)
@@ -123,12 +128,13 @@ public final class PlacementSearch
         final int surfaceY = world.getHeight(Heightmap.Types.WORLD_SURFACE_WG, x, z);
         for (int y = surfaceY + 2; y >= surfaceY - 6; y--)
         {
-            final BlockPos anchor = new BlockPos(x, y, z);
+            final BlockPos groundColumn = new BlockPos(x, y, z);
+            final BlockPos anchor = BlueprintAnchorOffsets.anchorFromGroundColumn(groundColumn, blueprint);
             if (!context.colony().isCoordInColony(world, anchor))
             {
                 continue;
             }
-            if (OccupancyMap.isLooseAnchorCandidate(world, anchor, context.occupiedColumns()))
+            if (OccupancyMap.isLooseAnchorCandidate(world, anchor, blueprint, context.occupiedColumns()))
             {
                 return anchor;
             }
@@ -175,23 +181,25 @@ public final class PlacementSearch
     private static double baseScore(
       @NotNull final PlanningContext context,
       @NotNull final PlannedBuildingType type,
+      @NotNull final Blueprint blueprint,
       @NotNull final BlockPos anchor)
     {
         final BlockPos center = context.snapshot().getColonyCenter();
+        final BlockPos groundColumn = BlueprintAnchorOffsets.groundColumnFromAnchor(anchor, blueprint);
         final double centerDistance = Math.sqrt(anchor.distSqr(center));
         final double nearest = nearestBuildingDistance(context, anchor);
 
         double score = 30.0 / (1.0 + centerDistance / 48.0);
         score += nearest < Double.MAX_VALUE ? Math.max(0.0, 22.0 - Math.abs(nearest - 20.0)) : 0.0;
-        score += flatnessScore(context, anchor);
+        score += flatnessScore(context, groundColumn);
         score += RoadPlanner.roadScoreBonus(context.colony(), anchor, context.roadNodes());
 
         score += switch (type.getCategory())
         {
             case LOGISTICS -> 10.0 / (1.0 + centerDistance / 24.0);
             case DEFENSE -> Math.min(10.0, centerDistance / 8.0);
-            case FOOD -> anchor.getY() <= center.getY() + 4 ? 4.0 : 0.0;
-            case RESOURCE -> type == PlannedBuildingType.MINER ? Math.max(0, center.getY() - anchor.getY()) * 0.25 : 3.0;
+            case FOOD -> groundColumn.getY() <= center.getY() + 4 ? 4.0 : 0.0;
+            case RESOURCE -> type == PlannedBuildingType.MINER ? Math.max(0, center.getY() - groundColumn.getY()) * 0.25 : 3.0;
             case CRAFTING -> nearest < 34 ? 5.0 : 0.0;
             case CIVIC, INFRASTRUCTURE -> 2.0;
         };
@@ -265,7 +273,7 @@ public final class PlacementSearch
         return nearest;
     }
 
-    private static double flatnessScore(@NotNull final PlanningContext context, @NotNull final BlockPos anchor)
+    private static double flatnessScore(@NotNull final PlanningContext context, @NotNull final BlockPos groundColumn)
     {
         final Level world = context.colony().getWorld();
         if (world == null)
@@ -276,9 +284,9 @@ public final class PlacementSearch
         int flat = 0;
         for (final Direction direction : Direction.Plane.HORIZONTAL)
         {
-            final BlockPos neighbor = anchor.relative(direction, ANCHOR_STEP);
+            final BlockPos neighbor = groundColumn.relative(direction, ANCHOR_STEP);
             final int y = world.getHeight(Heightmap.Types.WORLD_SURFACE_WG, neighbor.getX(), neighbor.getZ());
-            if (Math.abs(y - anchor.getY()) <= 2)
+            if (Math.abs(y - groundColumn.getY()) <= 2)
             {
                 flat++;
             }

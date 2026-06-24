@@ -23,6 +23,7 @@ import org.Artificial.beastofburden.colony.buildings.modules.TownHallBeastofburd
 import org.Artificial.beastofburden.colony.planning.ColonyPhase;
 import org.Artificial.beastofburden.colony.planning.FixedPlanScript;
 import org.Artificial.beastofburden.colony.planning.FixedPlanStep;
+import org.Artificial.beastofburden.colony.planning.PlanningDisplayFormatter;
 import org.Artificial.beastofburden.colony.planning.PlanStepFormatter;
 import org.Artificial.beastofburden.colony.planning.PlanningMode;
 import org.Artificial.beastofburden.colony.work.BeastWorkLogAction;
@@ -145,6 +146,7 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
           snapshot.getPlanningPhase(),
           snapshot.getPlanningLastDecision(),
           snapshot.getPlanningDetail(),
+          snapshot.getPlanningRetryCooldown(),
           snapshot.isAutonomousPlanningEnabled(),
           snapshot.getPlanScript()
         );
@@ -210,6 +212,7 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
       @NotNull final ColonyPhase phase,
       @NotNull final String lastDecision,
       @NotNull final String planningDetail,
+      final int planningRetryCooldown,
       final boolean enabled,
       @NotNull final FixedPlanScript planScript)
     {
@@ -276,13 +279,17 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
 
         if (detail != null)
         {
-            if (planningDetail.isEmpty())
+            if ("cooldown".equals(lastDecision))
+            {
+                detail.setText(PlanningDisplayFormatter.formatCooldownDetail(planningRetryCooldown));
+            }
+            else if (planningDetail.isEmpty())
             {
                 detail.setText(Component.empty());
             }
             else
             {
-                detail.setText(Component.literal(planningDetail));
+                detail.setText(PlanningDisplayFormatter.formatDetail(planningDetail));
             }
         }
     }
@@ -302,19 +309,7 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
     @NotNull
     private Component resolvePlanningDecision(@NotNull final String lastDecision)
     {
-        if (lastDecision.startsWith("builders_busy:"))
-        {
-            return Component.translatable("com.beastofburden.gui.townhall.planning.builders_busy", lastDecision.substring("builders_busy:".length()));
-        }
-
-        if ("scripted_complete".equals(lastDecision))
-        {
-            return Component.translatable("com.beastofburden.gui.townhall.scripted.complete");
-        }
-
-        final String key = "com.beastofburden.gui.townhall.planning." + lastDecision;
-        final Component translated = Component.translatable(key);
-        return translated.getString().equals(key) ? Component.literal(lastDecision) : translated;
+        return PlanningDisplayFormatter.formatDecision(lastDecision);
     }
 
     private void refreshActiveWork(@NotNull final List<BeastWorkStatus> activeWork)
@@ -378,9 +373,19 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
                     {
                         icon.setVisible(false);
                     }
-                    itemLine.setText(status.getDetail().isEmpty()
-                      ? Component.translatable("com.beastofburden.gui.townhall.planning_work")
-                      : Component.literal(status.getDetail()));
+                    final Component plannedDetail = PlanningDisplayFormatter.formatDetail(status.getDetail());
+                    if (!plannedDetail.getString().isEmpty())
+                    {
+                        itemLine.setText(plannedDetail);
+                    }
+                    else if (!status.getItemId().equals(ResourceLocation.fromNamespaceAndPath("minecraft", "air")))
+                    {
+                        itemLine.setText(formatItemLine(itemStack(status.getItemId(), status.getCount()), status.getCount()));
+                    }
+                    else
+                    {
+                        itemLine.setText(Component.translatable("com.beastofburden.gui.townhall.planning_work"));
+                    }
                     progress.setSize(0, progress.getHeight());
                     return;
                 }
@@ -498,25 +503,6 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
     @NotNull
     private Component formatHistoryItem(@NotNull final BeastWorkLogEntry entry, @NotNull final ItemStack stack)
     {
-        if (entry.getAction() == BeastWorkLogAction.DELIVERED && entry.getDurationTicks() > 0)
-        {
-            return Component.translatable(
-              "com.beastofburden.gui.townhall.history_item_timed",
-              stack.getHoverName(),
-              entry.getCount(),
-              formatSeconds(entry.getDurationTicks())
-            );
-        }
-
-        if (entry.getAction() == BeastWorkLogAction.PLANNED && !entry.getDetail().isEmpty())
-        {
-            return Component.translatable(
-              "com.beastofburden.gui.townhall.history_planned",
-              stack.getHoverName(),
-              entry.getDetail()
-            );
-        }
-
         return Component.translatable(
           "com.beastofburden.gui.townhall.history_item",
           stack.getHoverName(),

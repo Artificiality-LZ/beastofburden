@@ -27,6 +27,7 @@ public final class BeastWorkSnapshot
       ColonyPhase.P0_FOUNDATION,
       "",
       "",
+      0,
       FixedPlanScript.createDefault()
     );
 
@@ -41,6 +42,7 @@ public final class BeastWorkSnapshot
     private final ColonyPhase planningPhase;
     private final String planningLastDecision;
     private final String planningDetail;
+    private final int planningRetryCooldown;
     @NotNull
     private final FixedPlanScript planScript;
 
@@ -56,6 +58,7 @@ public final class BeastWorkSnapshot
       @NotNull final ColonyPhase planningPhase,
       @NotNull final String planningLastDecision,
       @NotNull final String planningDetail,
+      final int planningRetryCooldown,
       @NotNull final FixedPlanScript planScript)
     {
         this.colonyDay = colonyDay;
@@ -69,6 +72,7 @@ public final class BeastWorkSnapshot
         this.planningPhase = planningPhase;
         this.planningLastDecision = planningLastDecision;
         this.planningDetail = planningDetail;
+        this.planningRetryCooldown = planningRetryCooldown;
         this.planScript = planScript;
     }
 
@@ -133,6 +137,11 @@ public final class BeastWorkSnapshot
         return planningDetail;
     }
 
+    public int getPlanningRetryCooldown()
+    {
+        return planningRetryCooldown;
+    }
+
     @NotNull
     public FixedPlanScript getPlanScript()
     {
@@ -166,6 +175,7 @@ public final class BeastWorkSnapshot
         final ColonyPhase phase = ColonyPhase.fromId(buf.readByte());
         final String lastDecision = buf.readUtf();
         final String planningDetail = buf.readUtf();
+        final int planningRetryCooldown = buf.isReadable() ? buf.readVarInt() : 0;
         final FixedPlanScript planScript = buf.isReadable() ? PlanScriptIO.read(buf) : FixedPlanScript.createDefault();
 
         return new BeastWorkSnapshot(
@@ -180,6 +190,7 @@ public final class BeastWorkSnapshot
           phase,
           lastDecision,
           planningDetail,
+          planningRetryCooldown,
           planScript
         );
     }
@@ -205,6 +216,7 @@ public final class BeastWorkSnapshot
         buf.writeByte(planningPhase.ordinal());
         buf.writeUtf(planningLastDecision);
         buf.writeUtf(planningDetail);
+        buf.writeVarInt(planningRetryCooldown);
         PlanScriptIO.write(buf, planScript);
     }
 }

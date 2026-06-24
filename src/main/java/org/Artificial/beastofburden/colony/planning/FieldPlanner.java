@@ -121,7 +121,7 @@ public final class FieldPlanner
             }
         }
 
-        return best;
+        return best!=null?best.below():best;
     }
 
     @NotNull

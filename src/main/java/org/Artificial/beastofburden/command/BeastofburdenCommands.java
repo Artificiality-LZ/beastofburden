@@ -27,10 +27,6 @@ public final class BeastofburdenCommands
           Commands.literal(Beastofburden.MODID)
             .requires(source -> source.hasPermission(2))
             .then(Commands.literal("planningInstantBuild")
-              .then(Commands.literal("on")
-                .executes(context -> setInstantBuild(context.getSource(), true)))
-              .then(Commands.literal("off")
-                .executes(context -> setInstantBuild(context.getSource(), false)))
               .then(Commands.argument("enabled", BoolArgumentType.bool())
                 .executes(context -> setInstantBuild(
                   context.getSource(),

@@ -1,6 +1,7 @@
 package org.Artificial.beastofburden.colony.planning;
 
 import com.minecolonies.api.colony.IColony;
+import com.minecolonies.api.colony.IColonyManager;
 import com.minecolonies.api.colony.buildings.IBuilding;
 import com.minecolonies.api.colony.buildings.ModBuildings;
 import net.minecraft.core.BlockPos;
@@ -35,7 +36,7 @@ public final class BuilderAssigner
     @Nullable
     public static BlockPos assign(@NotNull final IColony colony, @NotNull final BlockPos target, final int targetLevel)
     {
-        return assignOrDefault(colony, target, targetLevel, false);
+        return pickBuilder(colony, target, targetLevel);
     }
 
     @Nullable
@@ -44,6 +45,52 @@ public final class BuilderAssigner
       @NotNull final BlockPos target,
       final int targetLevel,
       final boolean coldStart)
+    {
+        final BlockPos chosen = pickBuilder(colony, target, targetLevel);
+        if (chosen != null)
+        {
+            return chosen;
+        }
+
+        return coldStart ? BlockPos.ZERO : null;
+    }
+
+    /**
+     * Picks a builder hut for an upgrade work order.
+     * <p>
+     * MineColonies allows a builder hut to upgrade itself when {@code currentLevel + 1 == targetLevel}
+     * via {@code BuildingBuilder#canBeBuiltByBuilder}, even though the hut is not yet at the target level.
+     */
+    @Nullable
+    public static BlockPos assignForUpgrade(
+      @NotNull final IColony colony,
+      @NotNull final BuildTask task,
+      @NotNull final BlockPos targetPos)
+    {
+        final int targetLevel = task.getTargetLevel();
+        final var world = colony.getWorld();
+        if (world == null)
+        {
+            return null;
+        }
+
+        final IBuilding target = IColonyManager.getInstance().getBuilding(world, targetPos);
+        if (target != null && isBuilderHut(target) && target.getBuildingLevel() + 1 == targetLevel)
+        {
+            if (countQueuedWork(colony, targetPos) < maxQueueSize())
+            {
+                return targetPos;
+            }
+        }
+
+        return pickBuilder(colony, targetPos, targetLevel);
+    }
+
+    @Nullable
+    private static BlockPos pickBuilder(
+      @NotNull final IColony colony,
+      @NotNull final BlockPos target,
+      final int targetLevel)
     {
         final List<BuilderCandidate> candidates = new ArrayList<>();
 
@@ -63,17 +110,10 @@ public final class BuilderAssigner
             candidates.add(new BuilderCandidate(building.getID(), (long) building.getPosition().distSqr(target), queueSize));
         }
 
-        final BlockPos chosen = candidates.stream()
+        return candidates.stream()
           .min(Comparator.comparingLong(BuilderCandidate::distanceSq).thenComparingInt(BuilderCandidate::queueSize))
           .map(BuilderCandidate::position)
           .orElse(null);
-
-        if (chosen != null)
-        {
-            return chosen;
-        }
-
-        return coldStart ? BlockPos.ZERO : null;
     }
 
     public static boolean isWithinBuilderRange(@NotNull final IColony colony, @NotNull final BlockPos target, final int targetLevel)

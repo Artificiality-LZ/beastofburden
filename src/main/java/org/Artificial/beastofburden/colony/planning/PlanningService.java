@@ -46,18 +46,23 @@ public final class PlanningService
         }
 
         final boolean coldStartBuilder = !context.snapshot().hasBuilderHut() && task.getType() == PlannedBuildingType.BUILDER;
-        final BlockPos builder = BuilderAssigner.assignOrDefault(
-          colony,
-          target.location(),
-          task.getTargetLevel(),
-          coldStartBuilder || task.getAction() == BuildTaskAction.PLACE_FIELD
-        );
+        final BlockPos targetLocation = target.location();
+        final BlockPos builder = task.getAction() == BuildTaskAction.UPGRADE
+          ? BuilderAssigner.assignForUpgrade(colony, task, targetLocation)
+          : BuilderAssigner.assignOrDefault(
+            colony,
+            targetLocation,
+            task.getTargetLevel(),
+            coldStartBuilder || task.getAction() == BuildTaskAction.PLACE_FIELD
+          );
         if (builder == null)
         {
             return fail(planner, colony, task, "no_builder");
         }
 
-        if (!coldStartBuilder && !BuilderAssigner.isWithinBuilderRange(colony, target.location(), task.getTargetLevel()))
+        if (!coldStartBuilder
+              && task.getAction() != BuildTaskAction.UPGRADE
+              && !BuilderAssigner.isWithinBuilderRange(colony, targetLocation, task.getTargetLevel()))
         {
             return fail(planner, colony, task, "no_builder_range");
         }
