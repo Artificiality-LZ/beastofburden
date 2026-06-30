@@ -11,7 +11,7 @@ BeastOfBurden is a **Minecraft Forge 1.20.1 mod** that acts as an **add-on for M
 - **Base package:** `org.Artificial.beastofburden` (note the capital `A` in `Artificial`)
 - **Display name:** `BeastOfBurden`
 - **Version:** `1.0-SNAPSHOT`
-- **License:** `All Rights Reserved` (as declared in `gradle.properties`)
+- **License:** `GPL-3.0-only` (as declared in `gradle.properties`)
 
 The mod is developed from the Forge MDK. The codebase is in active development, especially in the `colony.planning` package.
 
