@@ -1,0 +1,68 @@
+# 运行时架构
+
+> 策划对照：[../design/00-overview/player-loop.md](../design/00-overview/player-loop.md)
+
+## 启动
+
+`Beastofburden` 构造：
+
+1. `BeastofburdenJobs.register(modEventBus)`
+2. 注册 COMMON `Config.SPEC`
+3. `commonSetup` enqueue：确认 job 在 `IJobRegistry`、`BeastofburdenBuildingModules.register()`、公民声音、`ModNetwork.register()`
+4. Forge 总线：服务器启动日志、`BeastofburdenCommands`
+
+客户端：`ClientSetup` 注册配置屏。
+
+## Tick 职责（不要把逻辑挂错总线）
+
+```
+ServerTick END  ── BeastofBurdenWorkDriver
+                     每个殖民地每个 JobBeastofburden 市民
+                     → BeastofBurdenAiDriver.tickCitizen
+                     → 若 hasActiveWork 则 EntityAIBeastofburden.tick
+                     （生成/配送需要每 tick，模块慢 tick 不够）
+
+ServerTick %40 ── ColonyRequestEventHandler
+                     扫描卡住请求 → BeastofBurdenRequestQueue
+
+Colony slow tick（ITickingModule，约 500）── TownHallBeastofburdenModule.onColonyTick
+                     AI 空则 bootstrap
+                     BeastWorkSync.syncFromJob
+                     ColonyPlannerDriver.tick   ← 规划只走这里
+                     自动雇佣
+```
+
+规划 **不是** 每游戏 tick。冷却单位是模块 tick。
+
+## 补给管线
+
+```
+ColonyRequestEventHandler
+  → UnfulfillableRequestDetector + ColonySupplyChecker
+  → BeastofBurdenRequestQueue
+EntityAIBeastofburden IDLE → GENERATE_ITEM → DELIVER_ITEM
+  → ItemGenerationTask / ColonyLogistics.fulfillRequest
+  → BeastWorkSync → module activeWork + workLog
+  → serializeToView → BeastWorkSnapshot → GUI
+```
+
+## 规划管线
+
+```
+ColonyPlannerDriver（门控）
+  → ColonyPlanner.tick → PlanningService.tick
+    → PlanningContext.collect
+    → HeuristicPlanningStrategy | ScriptedPlanningStrategy
+    → PlacementSearch | FieldPlanner | 升级坐标
+    → BuilderAssigner
+    → ColonyBuildingExecutor
+    → RoadPlanner.paveEntrance（非田、非冷启动）
+```
+
+## 线程与侧
+
+全部殖民地逻辑在服务端。客户端只有 GUI、配置屏、计划编辑器。工作数据走 MineColonies 建筑模块 `serializeToView`，不是独立 S2C 频道。C2S 见 [protocols.md](protocols.md)。
+
+## Mixin
+
+`beastofburden.mixins.json` 的 `mixins` / `client` 均为空。Gradle Mixin 插件仍在。1.1.873 市政厅侧栏原生可见，不要为侧栏再加 mixin，除非升到需要 `shouldRenderDefaultSidebar` 的版本。

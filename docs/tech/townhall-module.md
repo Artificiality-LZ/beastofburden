@@ -1,0 +1,44 @@
+# 市政厅模块
+
+> 策划：[../design/01-systems/job.md](../design/01-systems/job.md)  
+> NBT/网络字段：[protocols.md](protocols.md)
+
+## 注册
+
+`BeastofburdenBuildingModules` 在 commonSetup 把 `BuildingEntry.ModuleProducer` 挂到 `minecolonies:townhall`。键：`TownHallBeastofburdenModule.MODULE_KEY = "beastofburden:townhall_beastofburden"`。
+
+## 接口
+
+`IAssignsJob`、`IPersistentModule`、`IBuildingEventsModule`、`IBuildingWorkerModule`、`ITickingModule`。
+
+View：`TownHallBeastofburdenModuleView` extends `WorkerBuildingModuleView`。图标 `"entity"`；`isPageVisible() = true`。
+
+## 容量与技能
+
+```
+getModuleMax() = max(1, min(3, (building.getBuildingLevel() + 1) / 2))
+PRIMARY_SKILL = Strength
+SECONDARY_SKILL = Adaptability
+```
+
+## onColonyTick
+
+1. 已分配市民：job 是 `JobBeastofburden` 且 `getWorkerAI()==null` → `BeastofBurdenAiDriver.tickCitizen`
+2. `BeastWorkSync.syncFromJob`
+3. `ColonyPlannerDriver.tick(this, colony)`
+4. 自动雇佣：未满、建筑已建或 level>0、`canAutoHire`、存在 jobless citizen
+
+## 客户端快照
+
+`createSnapshot()` 组装 `BeastWorkSnapshot`（按 `workLogHistoryDays` 滤历史），再 `serializeToView`：
+
+1. 父类工人模块字段（人数、id、雇佣模式、max、job、双技能）
+2. `BeastWorkSnapshot.write(buf)`
+
+View `deserialize`：`super` 然后 `BeastWorkSnapshot.read`。
+
+## 规划 API（模块对外）
+
+- `setAutonomousPlanning` / `cyclePlanningMode` / `applyPlanScript`
+- 切模式、改脚本会清冷却并 `markDirty`
+- `syncedPhase` / `syncedLastDecision` / `syncedPlanningDetail` 给 GUI，来自 planner report

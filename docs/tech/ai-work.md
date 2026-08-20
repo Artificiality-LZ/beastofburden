@@ -1,0 +1,54 @@
+# AI 与补给
+
+> 策划：[../design/01-systems/supply.md](../design/01-systems/supply.md)  
+> 公式：[../design/02-economy/numbers.md](../design/02-economy/numbers.md)
+
+## 状态机
+
+`EntityAIBeastofburden` extends MineColonies `AbstractAISkeleton`。
+
+| From | 条件 | To |
+|------|------|-----|
+| INIT | 总是 | IDLE |
+| IDLE | `hasWorkAvailable()` | GENERATE_ITEM |
+| IDLE | `idle()` | IDLE（漫游） |
+| GENERATE_ITEM | `tickGenerateItem` | 自身 / DELIVER_ITEM / IDLE |
+| DELIVER_ITEM | `tickDeliverItem` | 自身 / IDLE |
+
+自定义状态在 `BeastofBurdenState`：`GENERATE_ITEM`、`DELIVER_ITEM`（`okayToEat = false`）。
+
+IDLE 漫游半径 15，间隔 200 tick。若已有 pending 配送或 `hasActiveWork` 则切入对应状态。
+
+`hasActiveWork()`：生成中、待配送、队列非空、或 `queue.hasInFlight()`。
+
+`canBeInterrupted()` 在生成/待配送时为 false；`resetAI` 此时 no-op；`onRemoval` 取消并打 CANCELLED 日志。
+
+进度同步冷却 10 tick。配送行走范围 `CitizenConstants.DEFAULT_RANGE_FOR_DELAY * 2`。
+
+## 卡住判定
+
+`UnfulfillableRequestDetector.isUnfulfillable`：活跃可配送 +（玩家/重试解析器或早期物流建筑请求）+ `!ColonySupplyChecker.canColonySupply`。
+
+早期物流：`!hasWarehouse || !hasActiveDeliveryman`。
+
+`RequestItemUtils.isStillFulfillable` 名字容易误导：实现是「仍应被牛马处理」= 仍 unfulfillable。
+
+## 队列
+
+`BeastofBurdenRequestQueue.pollNext` 会再验证仍卡住。`markInFlight` 防止重复领取。`job.getAsyncRequests().add(requestId)`。
+
+## 生成
+
+`ItemGenerationTask.calculateDuration`：见数值文档。完成：物品进背包（溢出掉落），进入配送。
+
+## 履约
+
+`ColonyLogistics.fulfillRequest`：
+
+1. 市民打开的请求 → 背包 + `overruleNextOpenRequestOfCitizenWithStack`
+2. 建筑打开的请求（citizen id **-1**）→ 建筑库存 + `overruleNextOpenRequestWithStack`
+3. `request.overrideCurrentDeliveries` + `requestManager.overruleRequest`
+
+## 价值
+
+`ItemValueRegistry.getStackValue`；启动 `ItemValueBootstrap.onServerStarted`。配方推导类型：CRAFTING、SMELTING、BLASTING、SMOKING、STONECUTTING、SMITHING。

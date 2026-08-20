@@ -1,0 +1,72 @@
+# 自治规划总览
+
+> 状态：**已实现**（固定式默认；启发式实验）  
+> 代码：`ColonyPlannerDriver` → `ColonyPlanner` → `PlanningService`  
+> 分册：[planning-scripted.md](planning-scripted.md)、[planning-heuristic.md](planning-heuristic.md)、[placement.md](placement.md)、[fields.md](fields.md)  
+> 技术对照：[../../tech/planning.md](../../tech/planning.md)
+
+## 玩家开关
+
+市政厅页：
+
+| 控件 | 行为 |
+|------|------|
+| 自主规划 ON/OFF | 关：完全不规划。需殖民地权限 `Action.MANAGE_HUTS` |
+| 规划模式 | `SCRIPTED` ↔ `HEURISTIC`，切模式清空冷却与上次决策 |
+| 编辑建造计划 | 仅固定式可见 |
+
+默认模式：**固定式**（`PlanningMode.DEFAULT = SCRIPTED`）。
+
+## 规划做什么 / 不做什么
+
+**做：** 选下一座小屋或农田或升级 → 找落点 → 指定建造者 → 放 hut 方块 / 贴田 → 下工单（或调试瞬间完工）→ 非农田非冷启动时铺入口碎石路。
+
+**不做：** 自己当建造者填方块；自动点研究（未接线）；按 P0–P4 阶段推进（遗留）。
+
+## 门控（全部通过才跑一轮）
+
+顺序在 `ColonyPlannerDriver`：
+
+| 条件失败 | decision 字符串 |
+|----------|-----------------|
+| 规划关闭 | （直接 return，无决策） |
+| 没有已分配牛马 | `no_assigned_beast` |
+| 牛马正在生成/配送 | `beast_busy` |
+| 冷启动且第一座建造者施工中 | `builder_construction_pending` |
+| 所有建造者忙碌（在建工单 ≥ 可运营建造者数） | `builders_busy:N/M` 或 `cold_start_busy` |
+| 例外：有农夫缺田 | **绕过**建造者忙碌门（允许 PLACE_FIELD） |
+| 例外：瞬间建造调试开 | 绕过建造者忙碌门 |
+
+通过后：策略选任务 → 解析坐标 → 分配建造者 → 执行。失败写入 report（`no_location`、`overlap`、`no_builder` 等）。
+
+## 冷却
+
+以 **市政厅模块 tick** 计数，不是游戏 tick。`PlanningConfig` 把配置夹到 0–20。
+
+| 时机 | 等待 |
+|------|------|
+| 规划成功 | `max(2, planningRetryCooldown)`，默认 2 |
+| 冷启动放下第一座建造者 | `max(2, planningColdStartCooldown)` |
+| 失败 / 空闲 | `planningRetryCooldown`（默认 1） |
+| `planningPlacementFailureCooldown` | **未接线**，失败走通用冷却 |
+
+## 冷启动
+
+没有可运营建造者小屋时：
+
+1. 两种策略都会优先要 1 级 BUILDER。
+2. `BuilderAssigner` 在 coldStart 下返回 `BlockPos.ZERO`（不要求已有建造者在范围内）。
+3. 不铺路。
+4. 放置后尝试 `HiringMode.AUTO` 并把无业市民雇进建造者小屋。
+5. 施工期间规划停在 `builder_construction_pending`。
+
+## 任务类型
+
+`BuildTaskAction`：`BUILD_NEW` / `UPGRADE` / `PLACE_FIELD`。
+
+升级走已有建筑坐标，不重新选址。农田见 [fields.md](fields.md)。
+
+## 调试
+
+`/beastofburden planningInstantBuild <true|false>`（权限 2）：瞬间粘贴蓝图并 `onUpgradeComplete`，不持久化。  
+`/beastofburden refreshPlanningCooldown [colonyId]`：清冷却，便于测试。

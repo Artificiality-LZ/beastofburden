@@ -1,0 +1,38 @@
+# 配置项一览
+
+> 文件：Forge **COMMON** spec → `beastofburden-common.toml`（不是 serverconfig）  
+> 代码：`Config.java` + `PlanningConfig` 夹紧  
+> 部分键 **未接线**，改它们不会改变运行行为。完整列表见 [../02-economy/numbers.md](02-economy/numbers.md)
+
+## 日志
+
+| 键 | 默认 | 接线 |
+|----|------|------|
+| `debugLogging` | false | 已接线（请求扫描 / AI） |
+| `planningTraceLogging` | true | 字段会加载；规划 trace 是否全部消费见代码，**不要假设**每条门控都打印 |
+
+## 生成与价值
+
+`baseGenerationTicks`、`minGenerationTicks`、`ticksPerItemValue`、`strengthSpeedBonus`、`defaultItemValue`、`deriveItemValuesFromRecipes`、`itemValues` — **已接线**。配置屏可改前一组（不含规划地理项）。
+
+## 工作日志
+
+`workLogMaxEntries`、`workLogHistoryDays` — **已接线**。
+
+## 规划（已接线）
+
+`planningRetryCooldown`、`planningColdStartCooldown`、`planningSearchRadius`、`planningMaxCandidates`、`planningBuilderRadius`、`planningMaxBuilderQueue`、`planningMinBlueprintSeparation`
+
+## 规划（未接线或遗留）
+
+| 键 | 默认 | 说明 |
+|----|------|------|
+| `planningPhaseEvaluationInterval` | 24000 | 阶段系统已停用 |
+| `planningPlacementFailureCooldown` | 2 | 失败走通用 retry |
+| `planningRequireRoadAccess` | false | 道路只影响打分 |
+| `planningResearchTickInterval` | 600 | 研究循环未挂 |
+
+## 不在 toml 里
+
+- 自主规划开关、规划模式、自定义计划：每殖民地市政厅 NBT
+- 瞬间建造：进程内 `PlanningInstantBuildState`，命令开关，不存盘

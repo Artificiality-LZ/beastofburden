@@ -1,0 +1,47 @@
+# 职业系统：牛马
+
+> 状态：**已实现**  
+> 代码：`JobBeastofburden`、`TownHallBeastofburdenModule`、`BeastofburdenJobs`  
+> 技术对照：[../../tech/townhall-module.md](../../tech/townhall-module.md)
+
+## 挂载方式
+
+不新建小屋。运行时把模块挂到 MineColonies `townhall` 建筑条目上。
+
+- 模块键：`beastofburden:townhall_beastofburden`
+- Job id：`beastofburden:beastofburden`
+- 模型：`ModModelTypes.SETTLER_ID`（避免 citizen 模型裁切）
+- 语音：复用 `"builder"` 语音集，键 `"beastofburden"`
+
+## 技能
+
+| 角色 | 技能 | 效果 |
+|------|------|------|
+| 主 | Strength（力量） | 生成速度：`capability = 1 + strengthLevel * strengthSpeedBonus`（默认每级 +5%） |
+| 副 | Adaptability（适应力） | 仅展示，无独立公式 |
+| 天气 | `canWorkDuringTheRain() = true` | 下雨不停工 |
+
+## 容量
+
+```
+getModuleMax() = max(1, min(3, (townHallLevel + 1) / 2))
+```
+
+| 市政厅等级 | 可雇人数 |
+|------------|----------|
+| 1–2 | 1 |
+| 3–4 | 2 |
+| 5 | 3 |
+
+未建成但 `buildingLevel > 0` 或建造中：仍允许自动雇佣（模块在施工期也能工作）。
+
+## 雇佣规则
+
+- 雇佣模式默认 `HiringMode.DEFAULT`，走 MineColonies `BuildingUtils.canAutoHire`。
+- 未满员且存在无业市民时，模块慢 tick 自动分配。
+- 客户端 `canAssign`：不能是儿童；已分配者可保留；其他人必须没有工作建筑。
+- 分配后立即 `BeastofBurdenAiDriver.tickCitizen`，避免等下一个慢 tick 才开工。
+
+## 玩家可见
+
+市政厅「牛马」页：已分配列表、雇佣/召回、当前工作、历史。无需额外方块或物品解锁。

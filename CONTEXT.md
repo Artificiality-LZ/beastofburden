@@ -23,8 +23,29 @@
 
 ## 文档
 
-- 贡献者/Agent 概览：[AGENTS.md](AGENTS.md)
-- 用户文档：（暂无）
+- 环境 / 工程约束：本文件 + [AGENTS.md](AGENTS.md)
+- 策划 + 技术（给 AI，改功能先读）：[docs/README.md](docs/README.md)
+
+```
+docs/
+  README.md                 阅读顺序与何时打开哪一页
+  design/
+    00-overview/            定位、术语、核心循环
+    01-systems/             职业、补给、规划、选址、农田
+    02-economy/             数值
+    03-ui/                  界面
+    04-content/             建筑目录、默认 12 步计划
+    05-config.md            配置项与接线状态
+  tech/
+    architecture.md         tick 与管线
+    packages.md             包 / 类地图
+    townhall-module.md      市政厅模块
+    ai-work.md              AI 与补给
+    planning.md             规划管线
+    protocols.md            网络 + NBT
+    minecolonies.md         MC 内部 API
+    gaps.md                 遗留 / 未接线
+```
 
 ## 怎么调试
 

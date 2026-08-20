@@ -1,0 +1,51 @@
+# 启发式规划（HEURISTIC）
+
+> 状态：**已实现，实验性**  
+> 代码：`HeuristicPlanningStrategy`  
+> UI 标注：「规划模式：启发式（实验性）」
+
+## 玩家心智
+
+每轮根据殖民地快照打分，选 **当前最高分** 的一座新建筑 / 一块田 / 一次升级。没有步骤列表，不可编辑。
+
+## 冷启动
+
+`!hasBuilderHut` 且没有在建 BUILDER 且没有 pending builder hut → 强制 `BUILD_NEW BUILDER` 优先级 **1000**，reason `foundation`。否则本轮无任务。
+
+## 候选与分数（建造者存在之后）
+
+收集全部候选，`max(priority)`。下表为加入候选的条件与公式（代码原文口径）。
+
+| 任务 | 分数 | reason | 跳过条件 |
+|------|------|--------|----------|
+| 农夫 PLACE_FIELD | 无食物来源 520，否则 240 | `farmer_field` | 没有缺田农夫 |
+| RESIDENCE 新建 | `520 + 空工人槽*20 + 无家可归*40`，仅当 `needsMoreHousing()` | `housing` | 已有 pending 住宅 |
+| TAVERN 新建 | 620，若尚无酒馆 | `first_tavern` | pending |
+| WAREHOUSE 新建 | 580，若尚无仓库 | `logistics` | pending |
+| COURIER 新建 | 540，若无在职配送员 | `logistics` | pending |
+| FARMER 新建 | 见 foodScore | `food` | pending |
+| COOK 新建 | 430，若无厨师且已有食物来源 | `food_chain` | pending |
+| FORESTER / MINER | resourceScore | `resource` | pending |
+| GUARD_TOWER | guardScore | `security` | pending |
+| 额外 BUILDER | builderCoverageScore | `builder_coverage` | pending |
+| UNIVERSITY | universityScore | `research` | pending |
+| 升级 BUILDER | `260 + pop*4`，目标等级上限 **3** | `builder_upgrade` | 无升级目标 |
+| 升级 TOWN_HALL | `180 + pop*4`，目标等级上限 **5** | `townhall_upgrade` | 无升级目标 |
+
+### 辅助分
+
+- **foodScore**：第一座农夫：饱和度 < 8 或无食物来源 → 560，否则 260；已有农夫且饱和度 < 6 → 300
+- **resourceScore**：该类型数量为 0 且人口 ≥ 3 → 360
+- **guardScore**：人口 ≥ 6 且守卫比 < 0.35 → 420
+- **builderCoverageScore**：人口 ≥ 8 且可运营工作小屋 > 建造者数 × 4 → 320
+- **universityScore**：还没有大学 **且** `hasCraftingChain()`（锯木 + 石匠 + 铁匠）→ 300
+
+启发式 **不会** 主动建锯木/石匠/铁匠，因此大学分在当前目录下很难自然达到——这是实验模式已知缺口。
+
+## 不在启发式里的建筑
+
+目录里大量类型（医院、学校、兵营、畜牧等）只存在于 `PlannedBuildingType` 与计划编辑器，启发式不会点它们。要盖这些，用固定式自定义计划。
+
+## 状态串
+
+`heuristic beds=%d jobSlots=%d jobless=%d`

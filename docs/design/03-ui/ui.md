@@ -1,0 +1,59 @@
+# 界面
+
+> 状态：**已实现**  
+> 布局：`assets/beastofburden/gui/layouthuts/layoutbeastofburden.xml`  
+> 代码：`BeastofburdenModuleWindow`、`BeastofburdenPlanEditorScreen`、`BuildingPickerScreen`、`BeastofburdenConfigScreen`  
+> 文案：必须同时改 `en_us.json` 与 `zh_cn.json`
+
+## 市政厅「牛马」页
+
+继承 MineColonies `SpecialAssignmentModuleWindow`。尺寸 190×352。侧栏由 1.1.873 原生渲染，**不需要 mixin**。
+
+| 控件 id | 作用 |
+|---------|------|
+| `workers` / `hire` / `recall` | 分配、雇佣、召回（父窗口） |
+| `togglePlanning` | 自主规划开关 → `ToggleAutonomousPlanningMessage` |
+| `cyclePlanningMode` | 切固定式/启发式 → `CyclePlanningModeMessage` |
+| `editPlan` | 仅固定式显示；打开计划编辑器 |
+| `planningStatus` / `planningDetail` | 决策 + 细节 |
+| `activeWork` | 当前工作列表（图标、进度条） |
+| `history` | 工作记录 |
+| `historyNote` | 天数过滤说明 |
+
+每 20 tick 发 `MarkBuildingDirtyMessage`；模块 `checkAndResetWorkUpdated` 时刷新。
+
+权限：规划开关/切模式/存计划需要殖民地 `Action.MANAGE_HUTS`。
+
+发展阶段文案（P0–P4）仍会显示，但服务端规划 **恒为 P0**，不要把它当成现行进度系统。
+
+## 计划编辑器（原版 Screen，非 BlockUI）
+
+- 步骤列表：建筑（类型、最低等级、数量）或农田数量
+- 上移 / 下移 / 删除
+- 添加建筑 → `BuildingPickerScreen`（可搜索；排除市政厅；可选「农田」步骤）
+- 恢复默认计划 / 保存 / 取消
+- 保存 → `SaveColonyPlanMessage`（整份脚本 NBT）
+
+校验失败由服务端 `PlanScriptValidator` 拒绝，客户端不应提交市政厅类型。
+
+## 配置屏（Mods → BeastOfBurden）
+
+Forge `ConfigScreenHandler`。分页：GENERAL / CONFIGURED / ADD_ITEM。
+
+可改：基础/最小 tick、每价值 tick、力量加成、默认价值、是否从配方推导、日志条数/天数、物品价值表。
+
+- 单人：`ConfigPersistence.applyAndSave`
+- 多人：`SaveBeastConfigMessage`，需要权限 2
+
+规划半径、冷却等 **不在此屏**，只在 `beastofburden-common.toml`。
+
+## 工作阶段展示
+
+| `BeastWorkPhase` | 中文 |
+|------------------|------|
+| IDLE | 待命 |
+| GENERATING | 生成 |
+| DELIVERING | 配送 |
+| PLANNING | 规划 |
+
+日志动作：生成了 / 送达了 / 取消了 / 规划了。

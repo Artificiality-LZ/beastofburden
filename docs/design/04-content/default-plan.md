@@ -1,0 +1,27 @@
+# 默认固定式计划（12 步）
+
+> 状态：**已实现**  
+> 代码：`FixedPlanScript.createDefault()`  
+> 文案键：`com.beastofburden.gui.townhall.scripted.step.1` … `.step.12`  
+> 规则：[../01-systems/planning-scripted.md](../01-systems/planning-scripted.md)
+
+`version=1`，`custom=false`。改顺序或数量必须同步代码默认步骤 **和** 12 条翻译（中英）。
+
+设计意图（由顺序反推，代码无单独注释）：先能盖 → 人口与物流 → 食物链 → 住房 → 资源 → 安全 → 建造者升级 → 研究入口。
+
+| 步 | 需求 | 意图 |
+|----|------|------|
+| 1 | BUILDER ×1，≥Lv1 | 冷启动，让后续工单有人接 |
+| 2 | TAVERN ×1，≥Lv1 | 招募/人口入口 |
+| 3 | WAREHOUSE ×1，≥Lv1 | 结束「早期物流」 |
+| 4 | COURIER ×1，≥Lv1 | 正常配送跑起来，牛马只补缺口 |
+| 5 | FARMER ×1 ≥Lv1 **且** FIELD ×2 | 食物；田数按代码是全局田计数不是「每农夫 2 块」的硬保证，以 `ScriptedPlanProgress` 为准 |
+| 6 | COOK ×1，≥Lv1 | 食物加工 |
+| 7 | RESIDENCE ×**2**，≥Lv1 | 床位 |
+| 8 | FORESTER ×1，≥Lv1 | 木头 |
+| 9 | MINER ×1，≥Lv1 | 矿 |
+| 10 | GUARD_TOWER ×1，≥Lv1 | 安全 |
+| 11 | BUILDER ×1，≥**Lv2** | 同一建造者小屋升级，或再建并升到 2 |
+| 12 | UNIVERSITY ×1，≥Lv1 | 研究入口（不会自动点科技） |
+
+玩家「恢复默认计划」必须回到上表，而不是启发式行为。
