@@ -114,6 +114,16 @@ esac
 
 CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
 
+# Cursor agent sessions inject GRADLE_USER_HOME into a per-chat temp sandbox
+# (cursor-sandbox-cache), which forces a full Gradle + Forge cache reinstall.
+# Always use the persistent user cache on this machine.
+case "${GRADLE_USER_HOME-}" in
+  *cursor-sandbox-cache*) GRADLE_USER_HOME="${USERPROFILE:-${HOME}}/.gradle" ;;
+esac
+if [ -z "${GRADLE_USER_HOME-}" ] ; then
+    GRADLE_USER_HOME="${USERPROFILE:-${HOME}}/.gradle"
+fi
+export GRADLE_USER_HOME
 
 # Determine the Java command to use to start the JVM.
 if [ -n "$JAVA_HOME" ] ; then

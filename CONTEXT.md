@@ -1,0 +1,53 @@
+# BeastOfBurden — AI 会话上下文
+
+每次新对话请附加本文件。项目架构细节见 [AGENTS.md](AGENTS.md)。
+
+## 环境
+
+| 项 | 值 |
+|----|----|
+| OS / Shell | Windows 10，PowerShell |
+| JDK | Java 17（PATH 中有 `java`；`JAVA_HOME` 可为空） |
+| Minecraft / Forge | 1.20.1 / 47.4.20 |
+| MineColonies | 1.1.873（不要用 1.1.1214+） |
+| Gradle | 8.8 wrapper |
+| 工作区 | `D:\Minecraft Mod\BeastOfBurden` |
+
+本地路径（本机已就绪，不要重装、不要改这些目录里的内容）：
+
+- 模拟殖民地源码（只读参考）：`D:\Minecraft Mod\BeastOfBurden\minecolonies-release-1.20`
+- Gradle 分发包：`D:\Minecraft Mod\BeastOfBurden\gradle-8.8-bin.zip`
+- 持久 Gradle 缓存：`C:\Users\22762\.gradle`
+
+`gradlew.bat` / `gradlew` 会把 Cursor 沙箱注入的临时 `GRADLE_USER_HOME`（`cursor-sandbox-cache`）纠正回上述持久缓存。直接调用 wrapper 即可。
+
+## 文档
+
+- 贡献者/Agent 概览：[AGENTS.md](AGENTS.md)
+- 用户文档：（暂无）
+
+## 怎么调试
+
+在仓库根目录执行：
+
+```powershell
+.\gradlew.bat compileJava    # 快速编译
+.\gradlew.bat build          # 完整构建，产物 build/libs/beastofburden-1.0-SNAPSHOT.jar
+.\gradlew.bat runClient      # 开发客户端，工作目录 run/
+.\gradlew.bat runServer      # 开发服务端
+```
+
+- 游戏日志：`run/logs/latest.log`
+- 禁止从网络下载 Gradle；wrapper 已指向本地 `gradle-8.8-bin.zip`
+- 不要无故 `clean` 或 `--refresh-dependencies`（会丢掉本机缓存、极慢）
+- 不要修改 `minecolonies-release-1.20/`
+
+## Git
+
+任务完成且编译通过后 **直接 commit，不必再问**。不要 push，除非用户明确要求。
+
+## 硬性约束
+
+- 包名保持 `org.Artificial.beastofburden`（`Artificial` 的 A 大写）
+- 新增翻译键同步写入 `en_us.json` 与 `zh_cn.json`
+- 新增网络消息时在 `ModNetwork.register()` 注册

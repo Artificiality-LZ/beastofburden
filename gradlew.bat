@@ -24,6 +24,13 @@
 @rem Set local scope for the variables with windows NT shell
 if "%OS%"=="Windows_NT" setlocal
 
+@rem Cursor agent sessions inject GRADLE_USER_HOME into a per-chat temp sandbox
+@rem (cursor-sandbox-cache), which forces a full Gradle + Forge cache reinstall.
+@rem Always use the persistent user cache on this machine.
+echo %GRADLE_USER_HOME% | findstr /I "cursor-sandbox-cache" >NUL
+if %ERRORLEVEL%==0 set "GRADLE_USER_HOME=%USERPROFILE%\.gradle"
+if not defined GRADLE_USER_HOME set "GRADLE_USER_HOME=%USERPROFILE%\.gradle"
+
 set DIRNAME=%~dp0
 if "%DIRNAME%"=="" set DIRNAME=.
 @rem This is normally unused
