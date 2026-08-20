@@ -94,9 +94,9 @@ public enum PlannedBuildingType
     public String getBlueprintName()
     {
         final var block = getEntry().getBuildingBlock();
-        if (block instanceof AbstractBlockHut<?> hut)
+        if (block instanceof AbstractBlockHut<?>)
         {
-            return hut.getBlueprintName();
+            return ((AbstractBlockHut<?>) block).getBlueprintName();
         }
         return schematicId;
     }

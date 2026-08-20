@@ -8,7 +8,7 @@ import com.ldtteam.blockui.controls.Text;
 import com.ldtteam.blockui.views.ScrollingList;
 import com.minecolonies.core.Network;
 import com.minecolonies.core.client.gui.WindowHireWorker;
-import com.minecolonies.core.client.gui.modules.building.SpecialAssignmentModuleWindow;
+import com.minecolonies.core.client.gui.modules.SpecialAssignmentModuleWindow;
 import com.minecolonies.core.network.messages.server.colony.building.MarkBuildingDirtyMessage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -68,7 +68,7 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
 
     public BeastofburdenModuleWindow(@NotNull final TownHallBeastofburdenModuleView moduleView)
     {
-        super(moduleView, WINDOW_LAYOUT);
+        super(moduleView.getBuildingView(), WINDOW_LAYOUT.toString());
         this.moduleView = moduleView;
         registerButton(BUTTON_HIRE, this::hireClicked);
         registerButton(BUTTON_TOGGLE_PLANNING, this::togglePlanningClicked);

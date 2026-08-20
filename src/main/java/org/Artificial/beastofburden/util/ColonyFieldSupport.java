@@ -241,7 +241,7 @@ public final class ColonyFieldSupport
 
     private static boolean assignToFarmer(@NotNull final IBuilding farmer, @NotNull final Object field)
     {
-        for (final IBuildingModule module : farmer.getModules())
+        for (final IBuildingModule module : farmer.getModulesByType(IBuildingModule.class))
         {
             if (!module.getClass().getName().equals(FARMER_FIELDS_MODULE))
             {

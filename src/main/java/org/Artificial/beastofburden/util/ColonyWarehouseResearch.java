@@ -3,7 +3,7 @@ package org.Artificial.beastofburden.util;
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.buildings.workerbuildings.IWareHouse;
 import com.minecolonies.api.research.IGlobalResearch;
-import com.minecolonies.api.research.IResearchCost;
+import com.minecolonies.api.research.costs.IResearchCost;
 import com.minecolonies.api.tileentities.AbstractTileEntityWareHouse;
 import com.minecolonies.api.util.ItemStackUtils;
 import com.minecolonies.api.util.Tuple;

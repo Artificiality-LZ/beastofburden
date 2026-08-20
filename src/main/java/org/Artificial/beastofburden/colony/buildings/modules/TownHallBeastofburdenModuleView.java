@@ -3,11 +3,8 @@ package org.Artificial.beastofburden.colony.buildings.modules;
 import com.ldtteam.blockui.views.BOWindow;
 import com.minecolonies.api.colony.ICitizenDataView;
 import com.minecolonies.api.colony.jobs.registry.JobEntry;
-import com.minecolonies.api.util.constant.Constants;
 import com.minecolonies.core.colony.buildings.moduleviews.WorkerBuildingModuleView;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import org.Artificial.beastofburden.client.gui.BeastofburdenModuleWindow;
 import org.Artificial.beastofburden.colony.jobs.BeastofburdenJobs;
 import org.Artificial.beastofburden.colony.planning.ColonyPhase;
@@ -21,9 +18,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public class TownHallBeastofburdenModuleView extends WorkerBuildingModuleView
 {
-    private static final ResourceLocation TAB_ICON =
-      ResourceLocation.fromNamespaceAndPath(Constants.MOD_ID, "textures/gui/modules/entity.png");
-
     private static final String GUI_DESC_KEY = "com.beastofburden.gui.townhall.beastofburden";
 
     private BeastWorkSnapshot workSnapshot = BeastWorkSnapshot.EMPTY;
@@ -36,15 +30,15 @@ public class TownHallBeastofburdenModuleView extends WorkerBuildingModuleView
     private String planningLastDecision = "";
 
     @Override
-    public ResourceLocation getIconResourceLocation()
+    public String getIcon()
     {
-        return TAB_ICON;
+        return "entity";
     }
 
     @Override
-    public Component getDesc()
+    public String getDesc()
     {
-        return Component.translatable(GUI_DESC_KEY);
+        return GUI_DESC_KEY;
     }
 
     @Override

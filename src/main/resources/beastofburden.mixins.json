@@ -7,8 +7,6 @@
   "mixins": [
   ],
   "client": [
-    "client.AbstractBuildingWindowAccessor",
-    "client.AbstractWindowTownHallMixin"
   ],
   "injectors": {
     "defaultRequire": 1

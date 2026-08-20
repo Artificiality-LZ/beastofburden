@@ -70,7 +70,7 @@ public final class PlanningInstantBuild
             building.getTileEntity().setColony(colony);
         }
 
-        building.onUpgradeComplete(blueprint, targetLevel);
+        building.onUpgradeComplete(targetLevel);
         building.calculateCorners();
         colony.markDirty();
         return true;

@@ -115,7 +115,7 @@ public final class ColonyWorkforce
             return building.getBuildingLevel() > 0 || building.isBuilt();
         }
 
-        return building.getBuildingLevel() > 0 && (building.isBuilt() || !building.isPendingConstruction());
+        return building.getBuildingLevel() > 0 && (building.isBuilt() || !building.hasWorkOrder());
     }
 
     private static int housingBedCapacity(@NotNull final IBuilding building)

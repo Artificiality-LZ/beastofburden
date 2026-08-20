@@ -29,13 +29,13 @@
 |-----------|---------|
 | Minecraft | 1.20.1 |
 | Forge | 47.4.20+ |
-| MineColonies | 1.1.1214+ |
+| MineColonies | 1.1.873 (not 1.1.1214+) |
 
 MineColonies pulls in its own dependencies (Structurize, BlockUI, Domum Ornamentum, Multi-Piston). Install them via your launcher or mod pack; do not distribute their jars from this repository.
 
 ### Installation
 
-1. Install **Minecraft 1.20.1**, **Forge 47+**, and **MineColonies** (and its dependencies).
+1. Install **Minecraft 1.20.1**, **Forge 47+**, and **MineColonies 1.1.873** (not 1.1.1214+) with its dependencies.
 2. Download the latest `beastofburden-*.jar` from [Releases](https://github.com/Artificiality-LZ/beastofburden/releases) (or build from source).
 3. Place the jar in your `mods` folder.
 4. Start a world, build a Town Hall, and open the **Beast of Burden** tab to hire workers.
@@ -63,7 +63,7 @@ See [AGENTS.md](AGENTS.md) for a detailed project overview for contributors.
 
 Issues and pull requests are welcome on [GitHub](https://github.com/Artificiality-LZ/beastofburden).
 
-This mod uses MineColonies internals and Mixins; upstream MineColonies updates may require compatibility fixes.
+This mod uses MineColonies internals; upstream MineColonies updates may require compatibility fixes. It targets MineColonies **1.1.873** and is **not** compatible with 1.1.1214+.
 
 ### License
 
@@ -88,7 +88,7 @@ If you distribute modified versions of this mod, you must also release the corre
 
 ### 安装
 
-1. 安装 **Minecraft 1.20.1**、**Forge 47+** 及 **模拟殖民地（MineColonies）** 及其依赖。
+1. 安装 **Minecraft 1.20.1**、**Forge 47+** 及 **模拟殖民地（MineColonies）1.1.873**（不要使用 1.1.1214+）及其依赖。
 2. 从 [Releases](https://github.com/Artificiality-LZ/beastofburden/releases) 下载 jar，或自行编译。
 3. 将 jar 放入 `mods` 文件夹，进游戏建造市政厅，在「牛马」标签页雇佣即可。
 

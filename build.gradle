@@ -178,7 +178,7 @@ dependencies {
     // MineColonies and its mandatory dependencies (must be present at runtime).
     // fg.deobf() remaps the obfuscated mod jars to your development mappings.
 //    implementation fg.deobf("com.ldtteam:minecolonies:${minecolonies_version}:universal")
-    implementation fg.deobf("curse.maven:minecolonies-245506:7962889")
+    implementation fg.deobf("curse.maven:minecolonies-245506:6444411")
     implementation fg.deobf("com.ldtteam:structurize:${structurize_version}")
     implementation fg.deobf("com.ldtteam:blockui:${blockui_version}")
     implementation fg.deobf("com.ldtteam:domum_ornamentum:${domum_ornamentum_version}:universal")

@@ -213,7 +213,7 @@ public final class ColonyBuildings
     public static Object getBuildingManager(@NotNull final IColony colony)
 
     {
-        return colony.getCommonBuildingManager();
+        return colony.getBuildingManager();
     }
 
 

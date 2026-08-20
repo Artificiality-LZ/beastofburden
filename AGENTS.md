@@ -31,11 +31,11 @@ The mod is developed from the Forge MDK. The codebase is in active development, 
 
 Declared in `build.gradle` / `gradle.properties`:
 
-- **MineColonies** — `curse.maven:minecolonies-245506:7962889` (target MineColonies `1.20.1-1.1.1214-snapshot`)
-- **Structurize** — `com.ldtteam:structurize:1.20.1-1.0.806-snapshot`
+- **MineColonies** — `curse.maven:minecolonies-245506:6444411` (target MineColonies `1.20.1-1.1.873-snapshot`)
+- **Structurize** — `com.ldtteam:structurize:1.20.1-1.0.768-snapshot`
 - **BlockUI** — `com.ldtteam:blockui:1.20.1-1.0.190-snapshot`
-- **Domum Ornamentum** — `com.ldtteam:domum_ornamentum:1.20.1-1.0.288-snapshot:universal`
-- **Multi-Piston** — `com.ldtteam:multipiston:1.20-1.2.30-ALPHA`
+- **Domum Ornamentum** — `com.ldtteam:domum_ornamentum:1.20.1-1.0.285-snapshot:universal`
+- **Multi-Piston** — `com.ldtteam:multipiston:1.20-1.2.43-RELEASE`
 
 ### Maven Repositories Used
 
@@ -77,7 +77,7 @@ Declared in `build.gradle` / `gradle.properties`:
 - `config` — config persistence / snapshot helpers
 - `entity.ai` — AI skeleton, states, tasks
 - `event` — server tick driver, request handler, item-value bootstrap
-- `mixin.client` — Mixin accessor and Town Hall sidebar injection
+- `mixin` — Mixin package (Gradle plugin remains wired; no mixins are currently registered)
 - `network` — `SimpleChannel` messages
 - `util` — request queue, logistics, item value registry, planning helpers
 
@@ -184,9 +184,8 @@ All Gradle commands are run from the repository root.
 
 ### Mixins
 
-- `AbstractWindowTownHallMixin` re-enables the default module sidebar for Town Halls that have the Beast module.
-- `AbstractBuildingWindowAccessor` exposes the protected `buildingView` field.
-- Mixin target methods use `remap = false` because MineColonies is deobfuscated in dev. The sidebar injection uses `require = 0` to remain compatible with older MineColonies versions that lack the target method.
+- Mixin Gradle (`mixingradle`) remains configured, but `beastofburden.mixins.json` currently has empty `mixins` and `client` lists.
+- MineColonies 1.1.873 still shows the Town Hall module sidebar natively, so the 1214-era `shouldRenderDefaultSidebar` injection is not used.
 
 ## Code Style Guidelines
 
@@ -200,7 +199,7 @@ The codebase follows the style visible in the existing files. When editing, pref
 - **Naming:**
   - Classes use `Beastofburden` concatenation (e.g., `BeastofburdenModuleWindow`), not `BeastOfBurden`.
   - Constants are `UPPER_SNAKE_CASE`.
-  - Mixin methods use the `beastofburden$` prefix.
+  - Mixin methods (if added later) use the `beastofburden$` prefix.
 - **Logging:** Use `com.mojang.logging.LogUtils.getLogger()` and `org.slf4j.Logger`. Prefer parameterized log messages.
 - **Resource locations:** Use `ResourceLocation.fromNamespaceAndPath(MODID, path)`.
 - **Imports:** Avoid wildcard imports; static imports are used sparingly for MineColonies constants.
@@ -233,7 +232,7 @@ The codebase follows the style visible in the existing files. When editing, pref
 - The mod declares dependency version ranges in `mods.toml`:
   - Forge: `[47,)`
   - Minecraft: `[1.20.1,1.21)`
-  - MineColonies: `[1.1.1214,)`
+  - MineColonies: `[1.1.873,1.1.1214)`
 
 ## Security Considerations
 
@@ -241,7 +240,7 @@ The codebase follows the style visible in the existing files. When editing, pref
 - **Input validation:** Item-value config entries are parsed with `ResourceLocation.isValidResourceLocation` and checked against the item registry.
 - **Config ranges:** All numeric config values use `defineInRange` to keep values within safe bounds.
 - **Debug flags:** `planningInstantBuildDebug` pastes structures instantly and is intended for testing only; keep it disabled for normal survival play.
-- **Compatibility risk:** The mod relies on MineColonies internals and Mixins. Updates to MineColonies can break mixins or internal API calls; always verify against the declared MineColonies version range.
+- **Compatibility risk:** The mod relies on MineColonies internals. It targets 1.1.873 and will not load correctly on 1.1.1214+. Updates to MineColonies can break internal API calls; always verify against the declared version range.
 - **Sensitive paths:** The project is on Windows; IDE run configurations contain absolute paths to the local Gradle cache. These are machine-specific and should not be committed if they change.
 
 ## Notes for AI Agents
