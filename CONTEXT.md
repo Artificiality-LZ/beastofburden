@@ -24,27 +24,27 @@
 ## 文档
 
 - 环境 / 工程约束：本文件 + [AGENTS.md](AGENTS.md)
-- 策划 + 技术（给 AI，改功能先读）：[docs/README.md](docs/README.md)
+- 策划 + 技术（给 AI，改功能先读）：[文档/索引.md](文档/索引.md)
 
 ```
-docs/
-  README.md                 阅读顺序与何时打开哪一页
-  design/
-    00-overview/            定位、术语、核心循环
-    01-systems/             职业、补给、规划、选址、农田
-    02-economy/             数值
-    03-ui/                  界面
-    04-content/             建筑目录、默认 12 步计划
-    05-config.md            配置项与接线状态
-  tech/
-    architecture.md         tick 与管线
-    packages.md             包 / 类地图
-    townhall-module.md      市政厅模块
-    ai-work.md              AI 与补给
-    planning.md             规划管线
-    protocols.md            网络 + NBT
-    minecolonies.md         MC 内部 API
-    gaps.md                 遗留 / 未接线
+文档/
+  索引.md                   阅读顺序与何时打开哪一页
+  策划/
+    00-总览/                定位、术语、核心循环
+    01-系统/                职业、补给、规划、选址、农田
+    02-数值/                数值
+    03-界面/                界面
+    04-内容/                建筑目录、默认 12 步计划
+    05-配置项.md            配置项与接线状态
+  技术/
+    架构.md                 tick 与管线
+    包与类地图.md           包 / 类地图
+    市政厅模块.md           市政厅模块
+    补给工作循环.md         AI 与补给
+    规划管线.md             规划管线
+    网络与存档.md           网络 + NBT
+    模拟殖民地挂钩.md       MC 内部 API
+    已知洞.md               遗留 / 未接线
 ```
 
 ## 怎么调试

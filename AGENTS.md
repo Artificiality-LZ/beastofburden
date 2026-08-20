@@ -245,7 +245,7 @@ The codebase follows the style visible in the existing files. When editing, pref
 
 ## Notes for AI Agents
 
-- Design and technical specs for later sessions live under `docs/` (index: `docs/README.md`). `CONTEXT.md` only lists that tree.
+- Design and technical specs for later sessions live under `文档/` (index: `文档/索引.md`). `CONTEXT.md` only lists that tree.
 - Do **not** modify `minecolonies-release-1.20/`. It is a local reference copy, is gitignored, and is not part of the Gradle project.
 - Preserve the `org.Artificial` package name exactly (capital `A`).
 - When adding a new network message, register it in `ModNetwork.register()` and bump the protocol string if the wire format changes incompatibly.
