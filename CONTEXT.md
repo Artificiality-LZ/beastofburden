@@ -9,13 +9,15 @@
 | OS / Shell | Windows 10，PowerShell |
 | JDK | Java 17（PATH 中有 `java`；`JAVA_HOME` 可为空） |
 | Minecraft / Forge | 1.20.1 / 47.4.20 |
-| MineColonies | 1.1.873（不要用 1.1.1214+） |
+| MineColonies | 1.1.873（及以上） |
 | Gradle | 8.8 wrapper |
 | 工作区 | `D:\Minecraft Mod\BeastOfBurden` |
 
 本地路径（本机已就绪，不要重装、不要改这些目录里的内容）：
 
 - 模拟殖民地源码（只读参考）：`D:\Minecraft Mod\BeastOfBurden\minecolonies-release-1.20`
+  - 源码地图 / 包改名 / 挂钩：`文档/技术/模拟殖民地挂钩.md`
+  - 注意：本地树仍是 `coremod` + `colony.fields`；运行时 1.1.873 是 `core` + `buildingextensions`
 - Gradle 分发包：`D:\Minecraft Mod\BeastOfBurden\gradle-8.8-bin.zip`
 - 持久 Gradle 缓存：`C:\Users\22762\.gradle`
 
@@ -43,8 +45,9 @@
     补给工作循环.md         AI 与补给
     规划管线.md             规划管线
     网络与存档.md           网络 + NBT
-    模拟殖民地挂钩.md       MC 内部 API
-    已知洞.md               遗留 / 未接线
+    模拟殖民地挂钩.md       MC 源码地图 + 内部 API 挂钩
+    已知洞.md               1.0 已处理 / 仍接受的限制
+    1.0验收.md              手工验收清单
 ```
 
 ## 怎么调试

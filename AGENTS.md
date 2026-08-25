@@ -119,6 +119,7 @@ All Gradle commands are run from the repository root.
 - Java 17 SDK is required.
 - `.idea/runConfigurations/` already contains generated `runClient`, `runServer`, `runGameTestServer`, and `runData` configurations.
 - If the run configurations are missing or stale, run `./gradlew genIntellijRuns` and refresh the Gradle project.
+- IntelliJ `runClient` needs `build/classpath/runClient_minecraftClasspath.txt` (Minecraft/library jars; written after `classes`) and extra mods in `run/mods` (copied by `copyUserdevMods`). FML userdev does not load `implementation` mods from the IntelliJ module classpath.
 
 ### Build Output
 
@@ -163,18 +164,19 @@ All Gradle commands are run from the repository root.
 
 ### Autonomous Planning
 
-- `ColonyPlanner` (driven by `ColonyPlannerDriver`) can place new huts, fields, roads, and research autonomously.
-- Two planning modes: `HEURISTIC` (`HeuristicPlanningStrategy`) and `SCRIPTED` (`ScriptedPlanningStrategy`).
-- Config options (`Config.java`) control intervals, search radius, builder range, max queue, separation, and an `planningInstantBuildDebug` flag that pastes blueprints instantly for testing.
+- `ColonyPlanner` (driven by `ColonyPlannerDriver`) can place new huts, fields, and upgrades autonomously. Default mode is **scripted** (editable 12-step plan); heuristic scoring is experimental.
+- Config options (`Config.java`) control retry/cold-start cooldown, search radius, builder range, max queue, and blueprint separation.
+- Instant paste for testing is a runtime command (`/beastofburden planningInstantBuild`), not a config flag; it is not persisted.
 - Planned placements are validated against terrain, existing structures, anchor block rules, builder range, and an internal occupancy map.
 
 ### Network
 
-`ModNetwork` uses Forge `SimpleChannel` with protocol version `"1"`. Registered messages:
+`ModNetwork` uses Forge `SimpleChannel` with protocol version `"2"`. Registered messages:
 
 - `SaveBeastConfigMessage` — client config screen saves config to the server.
 - `ToggleAutonomousPlanningMessage` — toggles autonomous planning for a Town Hall.
 - `CyclePlanningModeMessage` — cycles heuristic/scripted planning mode.
+- `SaveColonyPlanMessage` — saves an edited scripted plan for a Town Hall.
 
 ### GUI
 
@@ -184,8 +186,8 @@ All Gradle commands are run from the repository root.
 
 ### Mixins
 
-- Mixin Gradle (`mixingradle`) remains configured, but `beastofburden.mixins.json` currently has empty `mixins` and `client` lists.
-- MineColonies 1.1.873 still shows the Town Hall module sidebar natively, so the 1214-era `shouldRenderDefaultSidebar` injection is not used.
+- Mixin Gradle (`mixingradle`) remains configured for a future refmap, but `beastofburden.mixins.json` is not registered (`mixin { config }` is omitted). Passing `--mixin.config` at launch makes Mixin read the file before this mod’s resources are on the classpath and crashes.
+- MineColonies 1.1.873 still shows the Town Hall module sidebar natively, so the 1214-era `shouldRenderDefaultSidebar` injection is not used. When mixins are added, declare them in `mods.toml` `[[mixins]]` instead of `--mixin.config`.
 
 ## Code Style Guidelines
 
@@ -232,21 +234,21 @@ The codebase follows the style visible in the existing files. When editing, pref
 - The mod declares dependency version ranges in `mods.toml`:
   - Forge: `[47,)`
   - Minecraft: `[1.20.1,1.21)`
-  - MineColonies: `[1.1.873,1.1.1214)`
+  - MineColonies: `[1.1.873,)`
 
 ## Security Considerations
 
 - **Network permission checks:** `SaveBeastConfigMessage.handle` verifies `player.hasPermissions(2)` (or single-player) before applying config changes.
 - **Input validation:** Item-value config entries are parsed with `ResourceLocation.isValidResourceLocation` and checked against the item registry.
 - **Config ranges:** All numeric config values use `defineInRange` to keep values within safe bounds.
-- **Debug flags:** `planningInstantBuildDebug` pastes structures instantly and is intended for testing only; keep it disabled for normal survival play.
-- **Compatibility risk:** The mod relies on MineColonies internals. It targets 1.1.873 and will not load correctly on 1.1.1214+. Updates to MineColonies can break internal API calls; always verify against the declared version range.
+- **Debug flags:** `/beastofburden planningInstantBuild` pastes structures instantly and is intended for testing only; keep it disabled for normal survival play. The flag is process-local and resets on restart.
+- **Compatibility risk:** The mod relies on MineColonies internals. It targets 1.1.873 and newer. Updates to MineColonies can break internal API calls; always verify against the declared version range.
 - **Sensitive paths:** The project is on Windows; IDE run configurations contain absolute paths to the local Gradle cache. These are machine-specific and should not be committed if they change.
 
 ## Notes for AI Agents
 
 - Design and technical specs for later sessions live under `文档/` (index: `文档/索引.md`). `CONTEXT.md` only lists that tree.
-- Do **not** modify `minecolonies-release-1.20/`. It is a local reference copy, is gitignored, and is not part of the Gradle project.
+- Do **not** modify `minecolonies-release-1.20/`. It is a local reference copy, is gitignored, and is not part of the Gradle project. Package map and `coremod`→`core` rename notes: `文档/技术/模拟殖民地挂钩.md`.
 - Preserve the `org.Artificial` package name exactly (capital `A`).
 - When adding a new network message, register it in `ModNetwork.register()` and bump the protocol string if the wire format changes incompatibly.
 - When adding new translation keys, mirror them in both `en_us.json` and `zh_cn.json`.
