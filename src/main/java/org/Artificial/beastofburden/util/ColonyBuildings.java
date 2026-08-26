@@ -99,8 +99,7 @@ public final class ColonyBuildings
     @Nullable
     public static IRegisteredStructureManager getStructureManager(@NotNull final IColony colony)
     {
-        final Object manager = colony.getBuildingManager();
-        return manager instanceof IRegisteredStructureManager registered ? registered : null;
+        return MineColoniesCompat.getStructureManager(colony);
     }
 
     /**
