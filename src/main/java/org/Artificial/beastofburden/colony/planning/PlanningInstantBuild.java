@@ -33,7 +33,8 @@ import static com.ldtteam.structurize.placement.AbstractBlueprintIterator.NULL_P
  */
 public final class PlanningInstantBuild
 {
-    private static final int MAX_PASTE_STEPS = 2_000_000;
+    /** Hard cap so a stuck/huge paste cannot freeze the server tick indefinitely. */
+    private static final int MAX_PASTE_STEPS = 250_000;
 
     private PlanningInstantBuild()
     {
@@ -178,7 +179,7 @@ public final class PlanningInstantBuild
             }
         }
 
-        BeastofBurdenLog.warn("Instant build paste exceeded step limit");
+        BeastofBurdenLog.warn("Instant build paste exceeded step limit ({})", MAX_PASTE_STEPS);
         return false;
     }
 

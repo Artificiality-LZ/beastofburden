@@ -3,6 +3,7 @@ package org.Artificial.beastofburden.colony.planning;
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.workorders.WorkOrderType;
 import net.minecraft.core.BlockPos;
+import org.Artificial.beastofburden.util.BeastofBurdenLog;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -12,6 +13,7 @@ public final class PlanningWorkOrders
 {
     private PlanningWorkOrders()
     {
+        throw new IllegalStateException("Utility class");
     }
 
     public static boolean hasConstructionOrderAt(@NotNull final IColony colony, @NotNull final BlockPos pos)
@@ -26,8 +28,9 @@ public final class PlanningWorkOrders
                 }
             }
         }
-        catch (final Exception ignored)
+        catch (final RuntimeException ex)
         {
+            BeastofBurdenLog.warn("Failed inspecting work orders for colony {} at {}: {}", colony.getID(), pos, ex.toString());
         }
         return false;
     }

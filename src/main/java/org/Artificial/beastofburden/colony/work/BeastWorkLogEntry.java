@@ -5,6 +5,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * One persisted work-history row for a beast-of-burden citizen.
@@ -153,16 +154,43 @@ public final class BeastWorkLogEntry
     @NotNull
     public static BeastWorkLogEntry load(@NotNull final CompoundTag tag)
     {
-        return new BeastWorkLogEntry(
-          tag.getInt(TAG_DAY),
-          tag.getInt(TAG_CITIZEN),
-          tag.getString(TAG_NAME),
-          BeastWorkLogAction.fromId(tag.getInt(TAG_ACTION)),
-          ResourceLocation.parse(tag.getString(TAG_ITEM)),
-          tag.getInt(TAG_COUNT),
-          tag.getInt(TAG_DURATION),
-          tag.getString(TAG_DETAIL)
-        );
+        final BeastWorkLogEntry entry = tryLoad(tag);
+        if (entry == null)
+        {
+            throw new IllegalArgumentException("Invalid work log entry NBT");
+        }
+        return entry;
+    }
+
+    /**
+     * @return the entry, or {@code null} when the item id is corrupt/empty.
+     */
+    @Nullable
+    public static BeastWorkLogEntry tryLoad(@NotNull final CompoundTag tag)
+    {
+        final String itemRaw = tag.getString(TAG_ITEM);
+        if (itemRaw == null || itemRaw.isBlank() || !ResourceLocation.isValidResourceLocation(itemRaw))
+        {
+            return null;
+        }
+
+        try
+        {
+            return new BeastWorkLogEntry(
+              tag.getInt(TAG_DAY),
+              tag.getInt(TAG_CITIZEN),
+              tag.getString(TAG_NAME),
+              BeastWorkLogAction.fromId(tag.getInt(TAG_ACTION)),
+              ResourceLocation.parse(itemRaw),
+              tag.getInt(TAG_COUNT),
+              tag.getInt(TAG_DURATION),
+              tag.getString(TAG_DETAIL)
+            );
+        }
+        catch (final RuntimeException ex)
+        {
+            return null;
+        }
     }
 
     @NotNull

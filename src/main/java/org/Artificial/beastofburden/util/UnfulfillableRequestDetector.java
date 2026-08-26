@@ -62,7 +62,8 @@ public final class UnfulfillableRequestDetector
      */
     public static boolean isUnfulfillable(@NotNull final IColony colony, @Nullable final IRequest<?> request)
     {
-        if (request == null || colony.getWorld().isClientSide)
+        final var world = colony.getWorld();
+        if (request == null || world == null || world.isClientSide)
         {
             return false;
         }

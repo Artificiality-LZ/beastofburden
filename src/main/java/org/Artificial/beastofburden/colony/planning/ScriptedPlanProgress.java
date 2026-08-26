@@ -4,6 +4,8 @@ import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.buildings.IBuilding;
 import com.minecolonies.api.colony.workorders.WorkOrderType;
 import net.minecraft.core.BlockPos;
+import org.Artificial.beastofburden.util.BeastofBurdenLog;
+import org.Artificial.beastofburden.util.ColonyBuildings;
 import org.Artificial.beastofburden.util.ColonyFieldSupport;
 import org.jetbrains.annotations.NotNull;
 
@@ -27,7 +29,7 @@ public final class ScriptedPlanProgress
         {
             case BUILDING -> countCommittedBuildingSlots(context, requirement.getBuildingType(), requirement.getMinLevel())
               >= requirement.getCount();
-            case FIELD -> countFields(context.colony()) >= requirement.getCount();
+            case FIELD -> isFieldRequirementSatisfied(context.colony(), requirement.getCount());
         };
     }
 
@@ -41,7 +43,7 @@ public final class ScriptedPlanProgress
             {
                 case BUILDING -> countBuiltBuildingSlots(context, requirement.getBuildingType(), requirement.getMinLevel())
                   >= requirement.getCount();
-                case FIELD -> countFields(context.colony()) >= requirement.getCount();
+                case FIELD -> isFieldRequirementSatisfied(context.colony(), requirement.getCount());
             };
             if (!complete)
             {
@@ -97,6 +99,45 @@ public final class ScriptedPlanProgress
         return ColonyFieldSupport.countFields(colony);
     }
 
+    /**
+     * FIELD demand is satisfied when enough fields exist, or every built farmer is already at
+     * MineColonies' per-hut cap. Extra planned fields are skipped instead of upgrading farmers.
+     */
+    public static boolean isFieldRequirementSatisfied(@NotNull final IColony colony, final int required)
+    {
+        final int count = countFields(colony);
+        if (count >= required)
+        {
+            return true;
+        }
+
+        final int capacity = totalFieldCapacity(colony);
+        return capacity > 0 && count >= capacity;
+    }
+
+    public static int effectiveFieldTarget(@NotNull final IColony colony, final int required)
+    {
+        final int capacity = totalFieldCapacity(colony);
+        if (capacity <= 0)
+        {
+            return required;
+        }
+        return Math.min(required, capacity);
+    }
+
+    public static int totalFieldCapacity(@NotNull final IColony colony)
+    {
+        int capacity = 0;
+        for (final IBuilding building : ColonyBuildings.getAllBuildings(colony))
+        {
+            if (ColonyFieldSupport.isFarmerHut(building) && building.isBuilt() && building.getBuildingLevel() > 0)
+            {
+                capacity += ColonyFieldSupport.maxAssignableFields(building);
+            }
+        }
+        return capacity;
+    }
+
     private static boolean matchesCommittedBuilding(
       @NotNull final IColony colony,
       @NotNull final IBuilding building,
@@ -129,6 +170,12 @@ public final class ScriptedPlanProgress
       @NotNull final Set<BlockPos> seen)
     {
         int count = 0;
+        final var world = context.colony().getWorld();
+        if (world == null)
+        {
+            return 0;
+        }
+
         try
         {
             for (final var order : context.colony().getWorkManager().getWorkOrders().values())
@@ -143,15 +190,16 @@ public final class ScriptedPlanProgress
                 }
 
                 final IBuilding building = com.minecolonies.api.colony.IColonyManager.getInstance()
-                  .getBuilding(context.colony().getWorld(), order.getLocation());
+                  .getBuilding(world, order.getLocation());
                 if ((building != null && type.matches(building.getBuildingType())) || type == mapOrderType(order.getTranslationKey()))
                 {
                     count++;
                 }
             }
         }
-        catch (final Exception ignored)
+        catch (final RuntimeException ex)
         {
+            BeastofBurdenLog.warn("Failed counting pending orders for colony {}: {}", context.colony().getID(), ex.toString());
         }
         return count;
     }
@@ -168,8 +216,9 @@ public final class ScriptedPlanProgress
                 }
             }
         }
-        catch (final Exception ignored)
+        catch (final RuntimeException ex)
         {
+            BeastofBurdenLog.warn("Failed checking work order at {}: {}", pos, ex.toString());
         }
         return false;
     }

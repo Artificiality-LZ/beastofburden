@@ -1,14 +1,20 @@
 package org.Artificial.beastofburden.colony.planning;
 
 import com.ldtteam.structurize.blueprints.v1.Blueprint;
+import com.minecolonies.api.blocks.ModBlocks;
+import com.minecolonies.api.blocks.huts.AbstractBlockMinecoloniesDefault;
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.buildings.IBuilding;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.levelgen.Heightmap;
+import org.Artificial.beastofburden.util.BeastofBurdenLog;
 import org.Artificial.beastofburden.util.ColonyBuildings;
 import org.Artificial.beastofburden.util.ColonyFieldSupport;
 import org.jetbrains.annotations.NotNull;
@@ -39,7 +45,7 @@ public final class FieldPlanner
     public static int desiredFieldCount(@NotNull final IBuilding farmer)
     {
         final int level = Math.max(1, farmer.getBuildingLevel());
-        return Math.min(3, 1 + level / 2);
+        return Math.min(ColonyFieldSupport.maxAssignableFields(farmer), Math.min(3, 1 + level / 2));
     }
 
     @Nullable
@@ -49,6 +55,12 @@ public final class FieldPlanner
         if (world == null)
         {
             return null;
+        }
+
+        final BlockPos existingScarecrow = findUnregisteredScarecrow(colony, farmerPos);
+        if (existingScarecrow != null)
+        {
+            return existingScarecrow;
         }
 
         final FieldBlueprintPaths.LoadedFieldBlueprint loaded = FieldBlueprintPaths.loadBasicField(colony);
@@ -88,7 +100,7 @@ public final class FieldPlanner
                     }
 
                     final BlockPos scarecrowAnchor = FieldBlueprintPaths.resolveScarecrowAnchor(blueprint, candidate, FIELD_FACING);
-                    if (existingAnchors.contains(scarecrowAnchor))
+                    if (existingAnchors.contains(scarecrowAnchor) || ColonyFieldSupport.hasFieldAt(colony, scarecrowAnchor))
                     {
                         continue;
                     }
@@ -121,7 +133,47 @@ public final class FieldPlanner
             }
         }
 
-        return best!=null?best.below():best;
+        return best != null ? best.below() : best;
+    }
+
+    @Nullable
+    private static BlockPos findUnregisteredScarecrow(@NotNull final IColony colony, @NotNull final BlockPos farmerPos)
+    {
+        final Level world = colony.getWorld();
+        if (world == null)
+        {
+            return null;
+        }
+
+        final int searchRadius = PlanningConfig.searchRadius();
+        for (int ring = MIN_FIELD_DISTANCE; ring <= searchRadius; ring += FIELD_CANDIDATE_STEP)
+        {
+            for (int dx = -ring; dx <= ring; dx += FIELD_CANDIDATE_STEP)
+            {
+                for (int dz = -ring; dz <= ring; dz += FIELD_CANDIDATE_STEP)
+                {
+                    if (Math.abs(dx) < MIN_FIELD_DISTANCE && Math.abs(dz) < MIN_FIELD_DISTANCE)
+                    {
+                        continue;
+                    }
+
+                    final int x = farmerPos.getX() + dx;
+                    final int z = farmerPos.getZ() + dz;
+                    final int y = world.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
+                    final BlockPos surface = new BlockPos(x, y, z);
+                    for (final BlockPos candidate : new BlockPos[]{surface, surface.below(), surface.above()})
+                    {
+                        if (ColonyFieldSupport.hasScarecrowAt(world, candidate)
+                              && !ColonyFieldSupport.hasFieldAt(colony, candidate)
+                              && colony.isCoordInColony(world, candidate))
+                        {
+                            return candidate;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     @NotNull
@@ -151,22 +203,36 @@ public final class FieldPlanner
 
         final Blueprint blueprint = loaded.blueprint();
         final BlockPos scarecrowAnchor = FieldBlueprintPaths.resolveScarecrowAnchor(blueprint, location, FIELD_FACING);
-        if (ColonyFieldSupport.hasFieldAt(colony, scarecrowAnchor))
+        if (ColonyFieldSupport.hasFieldAt(colony, scarecrowAnchor)
+              || ColonyFieldSupport.hasFieldAt(colony, location))
         {
             return ColonyBuildingExecutor.ExecutionResult.failed("field_already_exists");
         }
 
-        if (!OccupancyMap.prepareAnchorSite(world, location))
+        final boolean scarecrowPresent = ColonyFieldSupport.hasScarecrowAt(world, scarecrowAnchor)
+          || ColonyFieldSupport.hasScarecrowAt(world, location);
+        if (!scarecrowPresent)
         {
-            return ColonyBuildingExecutor.ExecutionResult.failed("blocked");
+            if (!OccupancyMap.prepareAnchorSite(world, location))
+            {
+                return ColonyBuildingExecutor.ExecutionResult.failed("blocked");
+            }
+
+            if (PlanningConfig.instantBuildDebug())
+            {
+                if (!PlanningInstantBuild.pasteBlueprint(server, location, blueprint, FIELD_FACING))
+                {
+                    return ColonyBuildingExecutor.ExecutionResult.failed("field_paste_failed");
+                }
+            }
+            else if (!placeScarecrowAnchor(world, scarecrowAnchor))
+            {
+                return ColonyBuildingExecutor.ExecutionResult.failed("scarecrow_place_failed");
+            }
         }
 
-        if (!PlanningInstantBuild.pasteBlueprint(server, location, blueprint, FIELD_FACING))
-        {
-            return ColonyBuildingExecutor.ExecutionResult.failed("field_paste_failed");
-        }
-
-        if (!ColonyFieldSupport.register(colony, scarecrowAnchor, farmerPos))
+        if (!ColonyFieldSupport.register(colony, scarecrowAnchor, farmerPos)
+              && !ColonyFieldSupport.register(colony, location, farmerPos))
         {
             return ColonyBuildingExecutor.ExecutionResult.failed("field_registration_failed");
         }
@@ -174,8 +240,60 @@ public final class FieldPlanner
         return ColonyBuildingExecutor.ExecutionResult.success(scarecrowAnchor, PlannedBuildingType.FARMER, "farmer_field");
     }
 
+    /**
+     * Places a scarecrow double-block without {@code setPlacedBy} (which auto-registers an unassigned field).
+     */
+    private static boolean placeScarecrowAnchor(@NotNull final Level world, @NotNull final BlockPos lower)
+    {
+        if (ModBlocks.blockScarecrow == null)
+        {
+            BeastofBurdenLog.warn("Scarecrow block unavailable; cannot place field at {}", lower);
+            return false;
+        }
+
+        final BlockPos upper = lower.above();
+        final BlockState lowerExisting = world.getBlockState(lower);
+        final BlockState upperExisting = world.getBlockState(upper);
+        if ((!lowerExisting.isAir() && !lowerExisting.canBeReplaced())
+              || (!upperExisting.isAir() && !upperExisting.canBeReplaced()))
+        {
+            return false;
+        }
+
+        final BlockState lowerState = ModBlocks.blockScarecrow.defaultBlockState()
+          .setValue(AbstractBlockMinecoloniesDefault.FACING, FIELD_FACING)
+          .setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.LOWER);
+        final BlockState upperState = lowerState.setValue(BlockStateProperties.DOUBLE_BLOCK_HALF, DoubleBlockHalf.UPPER);
+
+        if (!world.setBlock(lower, lowerState, Block.UPDATE_ALL))
+        {
+            return false;
+        }
+        if (!world.setBlock(upper, upperState, Block.UPDATE_ALL))
+        {
+            world.removeBlock(lower, false);
+            return false;
+        }
+        return true;
+    }
+
     @Nullable
     public static BlockPos findFarmerNeedingField(@NotNull final IColony colony)
+    {
+        return findFarmerForField(colony, false);
+    }
+
+    /**
+     * Farmer who can still receive another field under MineColonies' level cap.
+     */
+    @Nullable
+    public static BlockPos findFarmerWithSpareCapacity(@NotNull final IColony colony)
+    {
+        return findFarmerForField(colony, true);
+    }
+
+    @Nullable
+    private static BlockPos findFarmerForField(@NotNull final IColony colony, final boolean useMineColoniesCap)
     {
         for (final IBuilding building : ColonyBuildings.getAllBuildings(colony))
         {
@@ -184,7 +302,10 @@ public final class FieldPlanner
                 continue;
             }
 
-            if (countFieldsForFarmer(colony, building.getPosition()) < desiredFieldCount(building))
+            final int cap = useMineColoniesCap
+              ? ColonyFieldSupport.maxAssignableFields(building)
+              : desiredFieldCount(building);
+            if (countFieldsForFarmer(colony, building.getPosition()) < cap)
             {
                 return building.getPosition();
             }

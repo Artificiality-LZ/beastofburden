@@ -27,7 +27,6 @@ import org.Artificial.beastofburden.colony.planning.PlanningMode;
 import org.Artificial.beastofburden.colony.work.BeastWorkLogEntry;
 import org.Artificial.beastofburden.colony.work.BeastWorkSnapshot;
 import org.Artificial.beastofburden.colony.work.BeastWorkStatus;
-import com.minecolonies.core.util.BuildingUtils;
 import org.Artificial.beastofburden.util.BeastofBurdenAiDriver;
 import org.Artificial.beastofburden.util.BeastWorkSync;
 import org.jetbrains.annotations.NotNull;
@@ -134,7 +133,7 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
         // Like the builder hut: hire and work while the TownHall is still under construction.
         if (!isFull()
               && (!building.isBuilt() || building.getBuildingLevel() > 0)
-              && BuildingUtils.canAutoHire(building, getHiringMode(), getJobEntry()))
+              && canAutoHireBeast())
         {
             final ICitizenData joblessCitizen = colony.getCitizenManager().getJoblessCitizen();
             if (joblessCitizen != null)
@@ -142,6 +141,36 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
                 assignCitizen(joblessCitizen);
             }
         }
+    }
+
+    /**
+     * API-equivalent of MineColonies {@code BuildingUtils.canAutoHire} for this module's job.
+     * Job-tag blueprint restrictions are skipped: the Town Hall beast slot always targets our job.
+     */
+    private boolean canAutoHireBeast()
+    {
+        if (!building.canAssignCitizens())
+        {
+            return false;
+        }
+
+        final HiringMode mode = getHiringMode();
+        if (mode == HiringMode.AUTO)
+        {
+            return true;
+        }
+        return mode == HiringMode.DEFAULT && !building.getColony().isManualHiring();
+    }
+
+    @NotNull
+    private static HiringMode hiringModeFromOrdinal(final int ordinal)
+    {
+        final HiringMode[] values = HiringMode.values();
+        if (ordinal < 0 || ordinal >= values.length)
+        {
+            return HiringMode.DEFAULT;
+        }
+        return values[ordinal];
     }
 
     @Override
@@ -427,20 +456,10 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
         compound.putBoolean(TAG_AUTONOMOUS_PLANNING, autonomousPlanningEnabled);
 
         final CompoundTag plannerTag = new CompoundTag();
-        plannerTag.putInt("phase", colonyPlanner.getPhaseId());
-        plannerTag.putInt("emergencyDays", colonyPlanner.getEmergencyDays());
-        plannerTag.putInt("recoveryDays", colonyPlanner.getRecoveryDays());
-        plannerTag.putInt("phaseCooldown", colonyPlanner.getPhaseCooldown());
         plannerTag.putInt("retryCooldown", colonyPlanner.getRetryCooldown());
-        plannerTag.putInt("researchCooldown", colonyPlanner.getResearchCooldown());
         plannerTag.putInt("planningMode", colonyPlanner.getPlanningMode().ordinal());
         plannerTag.put("scripted", colonyPlanner.getScriptedStrategy().writeToNbt());
         plannerTag.put("debug", colonyPlanner.writeDebugNbt());
-        final var world = building.getColony().getWorld();
-        if (world != null)
-        {
-            plannerTag.put("blocklist", colonyPlanner.writeBlocklistNbt(world.getGameTime()));
-        }
         compound.put(TAG_PLANNER, plannerTag);
     }
 
@@ -449,24 +468,22 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
     {
         if (compound.contains(TAG_ASSIGNED))
         {
-            hiringMode = HiringMode.values()[compound.getCompound(TAG_ASSIGNED).getInt(TAG_HIRING_MODE)];
+            hiringMode = hiringModeFromOrdinal(compound.getCompound(TAG_ASSIGNED).getInt(TAG_HIRING_MODE));
         }
         else
         {
-            hiringMode = HiringMode.values()[compound.getInt(TAG_HIRING_MODE)];
+            hiringMode = hiringModeFromOrdinal(compound.getInt(TAG_HIRING_MODE));
         }
 
-        if (!compound.contains(TAG_WORKING_RESIDENTS))
+        if (compound.contains(TAG_WORKING_RESIDENTS))
         {
-            return;
-        }
-
-        for (final int citizenId : compound.getIntArray(TAG_WORKING_RESIDENTS))
-        {
-            final ICitizenData citizen = building.getColony().getCitizenManager().getCivilian(citizenId);
-            if (citizen != null)
+            for (final int citizenId : compound.getIntArray(TAG_WORKING_RESIDENTS))
             {
-                assignCitizen(citizen);
+                final ICitizenData citizen = building.getColony().getCitizenManager().getCivilian(citizenId);
+                if (citizen != null)
+                {
+                    assignCitizen(citizen);
+                }
             }
         }
 
@@ -476,7 +493,11 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
             final ListTag logTag = compound.getList(TAG_WORK_LOG, Tag.TAG_COMPOUND);
             for (int i = 0; i < logTag.size(); i++)
             {
-                workLog.add(BeastWorkLogEntry.load(logTag.getCompound(i)));
+                final BeastWorkLogEntry entry = BeastWorkLogEntry.tryLoad(logTag.getCompound(i));
+                if (entry != null)
+                {
+                    workLog.add(entry);
+                }
             }
         }
 
@@ -484,21 +505,12 @@ public class TownHallBeastofburdenModule extends AbstractBuildingModule
         if (compound.contains(TAG_PLANNER, Tag.TAG_COMPOUND))
         {
             final CompoundTag plannerTag = compound.getCompound(TAG_PLANNER);
-            final var world = building.getColony().getWorld();
             colonyPlanner.readFromNbt(
-              plannerTag.getInt("phase"),
-              plannerTag.getInt("emergencyDays"),
-              plannerTag.getInt("recoveryDays"),
-              plannerTag.getInt("phaseCooldown"),
               plannerTag.contains("retryCooldown") ? plannerTag.getInt("retryCooldown") : plannerTag.getInt("tacticalCooldown"),
-              plannerTag.contains("researchCooldown") ? plannerTag.getInt("researchCooldown") : 0,
-              plannerTag.contains("debug", Tag.TAG_COMPOUND) ? plannerTag.getCompound("debug") : null,
-              plannerTag.contains("blocklist", Tag.TAG_COMPOUND) ? plannerTag.getCompound("blocklist") : null,
-              world == null ? 0L : world.getGameTime(),
               plannerTag.contains("planningMode") ? plannerTag.getInt("planningMode") : PlanningMode.DEFAULT.ordinal(),
+              plannerTag.contains("debug", Tag.TAG_COMPOUND) ? plannerTag.getCompound("debug") : null,
               plannerTag.contains("scripted", Tag.TAG_COMPOUND) ? plannerTag.getCompound("scripted") : null
             );
-            colonyPlanner.syncBootstrapState(building.getColony());
             syncedPhase = ColonyPhase.fromId(plannerTag.getInt("phase"));
         }
     }

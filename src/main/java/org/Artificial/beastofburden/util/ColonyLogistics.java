@@ -4,8 +4,6 @@ import com.google.common.collect.ImmutableList;
 import com.minecolonies.api.colony.ICitizenData;
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.buildings.IBuilding;
-import com.minecolonies.api.colony.buildings.workerbuildings.IBuildingDeliveryman;
-import com.minecolonies.api.colony.buildings.workerbuildings.IWareHouse;
 import com.minecolonies.api.colony.requestsystem.request.IRequest;
 import com.minecolonies.api.colony.requestsystem.requestable.Tool;
 import com.minecolonies.api.colony.requestsystem.token.IToken;
@@ -14,9 +12,7 @@ import com.minecolonies.api.util.ItemStackUtils;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -38,36 +34,12 @@ public final class ColonyLogistics
 
     public static boolean hasWarehouse(@NotNull final IColony colony)
     {
-        if (!ColonyBuildings.getWarehouses(colony).isEmpty())
-        {
-            return true;
-        }
-
-        return anyKnownBuildingMatches(colony, IWareHouse.class::isInstance);
+        return !ColonyBuildings.getWarehouses(colony).isEmpty();
     }
 
     public static boolean hasActiveDeliveryman(@NotNull final IColony colony)
     {
         return ColonyBuildings.hasActiveDeliveryman(colony);
-    }
-
-    public static int countAllOpenRequests(@NotNull final IColony colony)
-    {
-        final int[] count = {0};
-
-        try
-        {
-            for (final IBuilding building : collectKnownBuildings(colony))
-            {
-                forEachOpenRequestBucket(colony, building, requests -> count[0] += requests.size());
-            }
-        }
-        catch (final Exception ex)
-        {
-            BeastofBurdenLog.warn("Failed to count open requests for colony {}: {}", colony.getID(), ex.toString());
-        }
-
-        return count[0];
     }
 
     public static boolean isEarlyLogistics(@NotNull final IColony colony)
@@ -82,7 +54,7 @@ public final class ColonyLogistics
     {
         try
         {
-            for (final IBuilding building : collectKnownBuildings(colony))
+            for (final IBuilding building : ColonyBuildings.getAllBuildings(colony))
             {
                 forEachOpenRequestBucket(colony, building, requests ->
                 {
@@ -115,7 +87,7 @@ public final class ColonyLogistics
     {
         try
         {
-            for (final IBuilding building : collectKnownBuildings(colony))
+            for (final IBuilding building : ColonyBuildings.getAllBuildings(colony))
             {
                 final Optional<ICitizenData> citizen = building.getCitizenForRequest(requestId);
                 if (citizen.isPresent())
@@ -228,50 +200,6 @@ public final class ColonyLogistics
         return true;
     }
 
-    /**
-     * Buildings reachable through citizen work/home assignments (public API only).
-     */
-    @NotNull
-    private static Set<IBuilding> collectKnownBuildings(@NotNull final IColony colony)
-    {
-        final Set<IBuilding> buildings = new HashSet<>();
-
-        try
-        {
-            for (final ICitizenData citizen : colony.getCitizenManager().getCitizens())
-            {
-                addBuilding(buildings, citizen.getWorkBuilding());
-                addBuilding(buildings, citizen.getHomeBuilding());
-            }
-        }
-        catch (final Exception ex)
-        {
-            BeastofBurdenLog.warn("Failed to enumerate buildings for colony {}: {}", colony.getID(), ex.toString());
-        }
-
-        return buildings;
-    }
-
-    private static boolean anyKnownBuildingMatches(@NotNull final IColony colony, @NotNull final java.util.function.Predicate<IBuilding> predicate)
-    {
-        try
-        {
-            for (final IBuilding building : collectKnownBuildings(colony))
-            {
-                if (predicate.test(building))
-                {
-                    return true;
-                }
-            }
-        }
-        catch (final Exception ex)
-        {
-            BeastofBurdenLog.warn("Failed to inspect buildings for colony {}: {}", colony.getID(), ex.toString());
-        }
-
-        return false;
-    }
-
     private static void forEachOpenRequestBucket(
       @NotNull final IColony colony,
       @NotNull final IBuilding building,
@@ -379,21 +307,14 @@ public final class ColonyLogistics
         if (!ItemStackUtils.isEmpty(remaining))
         {
             BeastofBurdenLog.warn(
-              "Building {} inventory full; {} items left over.",
+              "Building {} inventory full; {} items left over — delivery aborted.",
               building.getID(),
               remaining.getCount()
             );
+            return false;
         }
 
         return true;
-    }
-
-    private static void addBuilding(@NotNull final Set<IBuilding> buildings, @Nullable final IBuilding building)
-    {
-        if (building != null)
-        {
-            buildings.add(building);
-        }
     }
 
     /**

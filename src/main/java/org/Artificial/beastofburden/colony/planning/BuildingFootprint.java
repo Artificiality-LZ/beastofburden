@@ -15,8 +15,6 @@ import org.Artificial.beastofburden.util.BeastofBurdenLog;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.Method;
-
 /**
  * Axis-aligned bounds of a hut blueprint or built structure in world space.
  * Uses MineColonies {@link ColonyUtils#calculateCorners} (same as construction tape).
@@ -278,20 +276,7 @@ public final class BuildingFootprint
             }
         }
 
-        try
-        {
-            final Method method = building.getClass().getMethod("getRotation");
-            final Object value = method.invoke(building);
-            if (value instanceof Integer rotation)
-            {
-                return rotationToFacing(rotation);
-            }
-        }
-        catch (final ReflectiveOperationException ignored)
-        {
-        }
-
-        return Direction.SOUTH;
+        return rotationToFacing(building.getRotation());
     }
 
     static int facingToRotation(@NotNull final Direction facing)

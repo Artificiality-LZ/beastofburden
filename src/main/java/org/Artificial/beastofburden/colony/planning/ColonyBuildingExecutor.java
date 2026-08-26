@@ -6,17 +6,24 @@ import com.minecolonies.api.blocks.AbstractBlockHut;
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.IColonyManager;
 import com.minecolonies.api.colony.buildings.IBuilding;
+import com.minecolonies.api.colony.managers.interfaces.IRegisteredStructureManager;
 import com.minecolonies.api.compatibility.newstruct.BlueprintMapping;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Tuple;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import org.Artificial.beastofburden.util.BeastofBurdenLog;
+import org.Artificial.beastofburden.util.ColonyBuildings;
 import org.Artificial.beastofburden.util.ConstructionTapeSupport;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Collections;
+import java.util.Set;
 
 /**
  * Places hut anchors and requests builder work orders.
@@ -66,7 +73,13 @@ public final class ColonyBuildingExecutor
             return ExecutionResult.failed("missing_building");
         }
 
-        final IBuilding building = IColonyManager.getInstance().getBuilding(colony.getWorld(), buildingPos);
+        final Level world = colony.getWorld();
+        if (world == null || world.isClientSide)
+        {
+            return ExecutionResult.failed("no_world");
+        }
+
+        final IBuilding building = IColonyManager.getInstance().getBuilding(world, buildingPos);
         if (building == null)
         {
             return ExecutionResult.failed("building_not_found");
@@ -147,6 +160,12 @@ public final class ColonyBuildingExecutor
         }
 
         final Blueprint blueprint = BlueprintPaths.loadBlueprint(pack, task.getType(), task.getTargetLevel());
+        if (blueprint == null)
+        {
+            BeastofBurdenLog.warn("Blueprint missing for planned build {} pack={} level={}", task.getType(), pack, task.getTargetLevel());
+            return ExecutionResult.failed("missing_blueprint");
+        }
+
         if (!OccupancyMap.prepareAnchorSite(world, location, blueprint))
         {
             return ExecutionResult.failed("blocked_anchor");
@@ -161,42 +180,88 @@ public final class ColonyBuildingExecutor
         final BlockState state = hutBlock.defaultBlockState().setValue(AbstractBlockHut.FACING, facing);
         world.setBlockAndUpdate(location, state);
 
-        abstractHut.onBlockPlacedByBuildTool(world, location, state, null, null, false, pack, blueprintPath);
-
-        final IBuilding building = IColonyManager.getInstance().getBuilding(world, location);
-        if (building == null)
-        {
-            BeastofBurdenLog.warn("Planned hut placed but building not registered at {}", location);
-            return ExecutionResult.failed("registration_failed");
-        }
-
-        building.setStructurePack(pack);
-        building.setBlueprintPath(blueprintPath);
-        building.setBuildingLevel(0);
-        building.setIsMirrored(false);
-
-        if (building.getTileEntity() != null)
-        {
-            building.getTileEntity().setColony(colony);
-        }
-
-        if (PlanningConfig.instantBuildDebug())
-        {
-            return executeInstantNewBuild(colony, task, location, structurePack, facing, building, pack, blueprintPath);
-        }
-
-        placeConstructionTape(building.getCorners(), world, colony);
-
+        IBuilding building = null;
         try
         {
+            abstractHut.onBlockPlacedByBuildTool(world, location, state, null, null, false, pack, blueprintPath);
+
+            building = IColonyManager.getInstance().getBuilding(world, location);
+            if (building == null)
+            {
+                BeastofBurdenLog.warn("Planned hut placed but building not registered at {}", location);
+                rollbackNewBuild(colony, world, location, null);
+                return ExecutionResult.failed("registration_failed");
+            }
+
+            building.setStructurePack(pack);
+            building.setBlueprintPath(blueprintPath);
+            building.setBuildingLevel(0);
+            building.setIsMirrored(false);
+
+            if (building.getTileEntity() != null)
+            {
+                building.getTileEntity().setColony(colony);
+            }
+
+            if (PlanningConfig.instantBuildDebug())
+            {
+                final ExecutionResult instant = executeInstantNewBuild(
+                  colony, task, location, structurePack, facing, building, pack, blueprintPath);
+                if (!instant.success())
+                {
+                    rollbackNewBuild(colony, world, location, building);
+                }
+                return instant;
+            }
+
+            placeConstructionTape(building.getCorners(), world, colony);
+
             building.requestUpgrade(null, builderPos);
+            if (!PlanningWorkOrders.hasConstructionOrderAt(colony, location))
+            {
+                BeastofBurdenLog.warn(
+                  "Build requested at {} but no work order was created (builder {}).",
+                  location,
+                  builderPos
+                );
+                rollbackNewBuild(colony, world, location, building);
+                return ExecutionResult.failed("work_order_failed");
+            }
+
             return ExecutionResult.success(location, task.getType(), task.getReason());
         }
-        catch (final Exception ex)
+        catch (final RuntimeException ex)
         {
             BeastofBurdenLog.warn("Failed to request build at {}: {}", location, ex.toString());
+            rollbackNewBuild(colony, world, location, building);
             return ExecutionResult.failed("work_order_failed");
         }
+    }
+
+    private static void rollbackNewBuild(
+      @NotNull final IColony colony,
+      @NotNull final Level world,
+      @NotNull final BlockPos location,
+      @Nullable final IBuilding building)
+    {
+        try
+        {
+            if (building != null)
+            {
+                final IRegisteredStructureManager manager = ColonyBuildings.getStructureManager(colony);
+                if (manager != null)
+                {
+                    final Set<ServerPlayer> subscribers = Collections.emptySet();
+                    manager.removeBuilding(building, subscribers);
+                }
+            }
+        }
+        catch (final RuntimeException ex)
+        {
+            BeastofBurdenLog.warn("Failed to unregister orphaned hut at {}: {}", location, ex.toString());
+        }
+
+        world.setBlock(location, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
     }
 
     @NotNull

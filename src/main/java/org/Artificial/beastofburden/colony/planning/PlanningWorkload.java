@@ -1,12 +1,12 @@
 package org.Artificial.beastofburden.colony.planning;
 
 import com.minecolonies.api.colony.IColony;
+import com.minecolonies.api.colony.workorders.IServerWorkOrder;
 import com.minecolonies.api.colony.workorders.IWorkOrder;
 import com.minecolonies.api.colony.workorders.WorkOrderType;
 import org.Artificial.beastofburden.colony.buildings.modules.TownHallBeastofburdenModule;
 import org.Artificial.beastofburden.colony.jobs.JobBeastofburden;
 import org.Artificial.beastofburden.entity.ai.EntityAIBeastofburden;
-import org.Artificial.beastofburden.event.ColonyRequestEventHandler;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -19,7 +19,7 @@ public final class PlanningWorkload
     }
 
     /**
-     * @return {@code true} when every assigned beast has no item-generation/delivery work.
+     * @return {@code true} when at least one assigned beast is not generating or delivering.
      */
     public static boolean hasIdleBeast(@NotNull final TownHallBeastofburdenModule module)
     {
@@ -30,17 +30,19 @@ public final class PlanningWorkload
 
         for (final var citizen : module.getAssignedCitizen())
         {
-            if (citizen.getJob() instanceof JobBeastofburden job)
+            if (!(citizen.getJob() instanceof JobBeastofburden job))
             {
-                final EntityAIBeastofburden ai = job.getWorkerAI();
-                if (ai != null && ai.isExecutingLogisticsWork())
-                {
-                    return false;
-                }
+                continue;
+            }
+
+            final EntityAIBeastofburden ai = job.getWorkerAI();
+            if (ai == null || !ai.isExecutingLogisticsWork())
+            {
+                return true;
             }
         }
 
-        return true;
+        return false;
     }
 
     /**
@@ -78,12 +80,6 @@ public final class PlanningWorkload
             if (ai.getGenerationTask().hasPendingDelivery())
             {
                 appendBlocker(blockers, citizen.getId() + ":delivering");
-            }
-
-            final var queue = ColonyRequestEventHandler.getQueue(job.getColony());
-            if (queue.hasInFlight())
-            {
-                appendBlocker(blockers, citizen.getId() + ":inFlight=" + queue.hasInFlight());
             }
         }
 
@@ -157,26 +153,13 @@ public final class PlanningWorkload
         return active < builders;
     }
 
-    /**
-     * @return {@code true} when there is at least one builder and fewer active jobs than builders.
-     */
-    public static boolean hasBuilderCapacity(@NotNull final IColony colony)
-    {
-        final int builders = countBuilderHuts(colony);
-        return builders > 0 && countActiveConstructionOrders(colony) < builders;
-    }
-
     static boolean isOrderStillActive(@NotNull final IWorkOrder order, @NotNull final IColony colony)
     {
-        try
+        if (order instanceof IServerWorkOrder serverOrder)
         {
-            final Object result = order.getClass().getMethod("isValid", IColony.class).invoke(order, colony);
-            return result instanceof Boolean bool && bool;
+            return serverOrder.isValid(colony);
         }
-        catch (final ReflectiveOperationException ex)
-        {
-            return true;
-        }
+        return true;
     }
 
     private static boolean isConstructionOrder(@NotNull final IWorkOrder order)

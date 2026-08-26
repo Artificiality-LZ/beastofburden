@@ -1,6 +1,7 @@
 package org.Artificial.beastofburden.util;
 
 import com.minecolonies.api.colony.IColony;
+import com.minecolonies.core.entity.ai.workers.util.ConstructionTapeHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Tuple;
 import net.minecraft.world.level.Level;
@@ -8,14 +9,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Places MineColonies construction tape via the core helper (runtime dependency).
+ * Places MineColonies construction tape via the core helper.
  */
 public final class ConstructionTapeSupport
 {
-    private static final String HELPER_CLASS = "com.minecolonies.core.entity.ai.workers.util.ConstructionTapeHelper";
-
     private ConstructionTapeSupport()
     {
+        throw new IllegalStateException("Utility class");
     }
 
     public static void place(
@@ -23,26 +23,19 @@ public final class ConstructionTapeSupport
       @NotNull final Level world,
       @Nullable final IColony colony)
     {
+        if (colony == null)
+        {
+            BeastofBurdenLog.warn("Construction tape skipped: colony is null (world={}).", world.dimension().location());
+            return;
+        }
+
         try
         {
-            final Class<?> helper = Class.forName(HELPER_CLASS);
-            if (colony != null)
-            {
-                try
-                {
-                    helper.getMethod("placeConstructionTape", Tuple.class, IColony.class).invoke(null, corners, colony);
-                    return;
-                }
-                catch (final NoSuchMethodException ignored)
-                {
-                }
-            }
-
-            helper.getMethod("placeConstructionTape", Tuple.class, Level.class).invoke(null, corners, world);
+            ConstructionTapeHelper.placeConstructionTape(corners, colony);
         }
-        catch (final ReflectiveOperationException ex)
+        catch (final RuntimeException ex)
         {
-            BeastofBurdenLog.warn("Construction tape helper unavailable: {}", ex.toString());
+            BeastofBurdenLog.warn("Construction tape placement failed: {}", ex.toString());
         }
     }
 }

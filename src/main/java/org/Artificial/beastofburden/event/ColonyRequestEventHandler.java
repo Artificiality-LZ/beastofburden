@@ -5,7 +5,11 @@ import com.minecolonies.api.colony.IColonyManager;
 import com.minecolonies.api.colony.requestsystem.request.IRequest;
 import com.mojang.logging.LogUtils;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.level.LevelEvent;
+import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.Artificial.beastofburden.Beastofburden;
@@ -60,6 +64,47 @@ public final class ColonyRequestEventHandler
 
             scanColony(colony, tickCounter);
         }
+    }
+
+    @SubscribeEvent
+    public static void onLevelUnload(final LevelEvent.Unload event)
+    {
+        if (event.getLevel().isClientSide())
+        {
+            return;
+        }
+
+        if (!(event.getLevel() instanceof ServerLevel unloading))
+        {
+            return;
+        }
+
+        for (final IColony colony : IColonyManager.getInstance().getAllColonies())
+        {
+            if (colony == null)
+            {
+                continue;
+            }
+
+            if (colony.getWorld() == unloading)
+            {
+                clearColonyQueue(colony.getID());
+                continue;
+            }
+
+            // Colony world pointer already cleared but dimension still matches the unloading level.
+            if (colony.getWorld() == null && colony.getDimension().equals(unloading.dimension()))
+            {
+                clearColonyQueue(colony.getID());
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(final ServerStoppingEvent event)
+    {
+        COLONY_QUEUES.clear();
+        LAST_SCAN_TICK.clear();
     }
 
     /**

@@ -108,7 +108,7 @@ public final class OccupancyMap
                 }
             }
         }
-        catch (final Exception ex)
+        catch (final RuntimeException ex)
         {
             BeastofBurdenLog.warn("Failed to inspect work orders for colony {} footprints: {}", colony.getID(), ex.toString());
         }
@@ -315,15 +315,18 @@ public final class OccupancyMap
                 return BuildingFootprint.fromAabb(box);
             }
         }
-        catch (final Exception ignored)
+        catch (final RuntimeException ex)
         {
+            BeastofBurdenLog.warn("Work-order bounding box failed at {}: {}", location, ex.toString());
         }
 
         final String pack = BlueprintPaths.defaultPack(order.getStructurePack());
         final String path = order.getStructurePath();
         if (path == null || path.isEmpty() || !StructurePacks.hasPack(pack))
         {
-            return BuildingFootprint.fromAnchor(location);
+            // Fail closed: omit footprint rather than reserve a 1-block anchor that allows overlaps.
+            BeastofBurdenLog.warn("Omitting work-order footprint at {}: missing pack/path ({} / {}).", location, pack, path);
+            return null;
         }
 
         try
@@ -331,7 +334,8 @@ public final class OccupancyMap
             final Blueprint blueprint = StructurePacks.getBlueprint(pack, path);
             if (blueprint == null)
             {
-                return BuildingFootprint.fromAnchor(location);
+                BeastofBurdenLog.warn("Omitting work-order footprint at {}: blueprint null for {}/{}", location, pack, path);
+                return null;
             }
 
             final var world = order.getColony() == null ? null : order.getColony().getWorld();
@@ -343,9 +347,10 @@ public final class OccupancyMap
 
             return BuildingFootprint.fromBlueprint(blueprint, location, facing);
         }
-        catch (final Exception ex)
+        catch (final RuntimeException ex)
         {
-            return BuildingFootprint.fromAnchor(location);
+            BeastofBurdenLog.warn("Omitting work-order footprint at {}: {}", location, ex.toString());
+            return null;
         }
     }
 
