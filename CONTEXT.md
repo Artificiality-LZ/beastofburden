@@ -15,9 +15,11 @@
 
 本地路径（本机已就绪，不要重装、不要改这些目录里的内容）：
 
-- 模拟殖民地源码（只读参考）：`D:\Minecraft Mod\BeastOfBurden\minecolonies-release-1.20`
-  - 源码地图 / 包改名 / 挂钩：`文档/技术/模拟殖民地挂钩.md`
-  - 注意：本地树仍是 `coremod` + `colony.fields`；运行时 1.1.873 是 `core` + `buildingextensions`
+- 模拟殖民地源码（只读参考，禁止改）：
+  - **对照本模组依赖 1.1.873**：`D:\Minecraft Mod\BeastOfBurden\minecolonies-1.20.1-1.1.873`（标签 `v1.20.1-1.1.873`，包名已是 `com.minecolonies.core`）
+  - **较新对照 1.1.1214**（文档里常写的 1214；1.20.1 无 1314 标签）：`D:\Minecraft Mod\BeastOfBurden\minecolonies-1.20.1-1.1.1214`
+  - 源码地图 / 挂钩：`文档/技术/模拟殖民地挂钩.md`
+  - 旧无版本复制 `minecolonies-release-1.20/` 可删；请改用上面带版本号的目录
 - Gradle 分发包：`D:\Minecraft Mod\BeastOfBurden\gradle-8.8-bin.zip`
 - 持久 Gradle 缓存：`C:\Users\22762\.gradle`
 
@@ -64,7 +66,7 @@
 - 游戏日志：`run/logs/latest.log`
 - 禁止从网络下载 Gradle；wrapper 已指向本地 `gradle-8.8-bin.zip`
 - 不要无故 `clean` 或 `--refresh-dependencies`（会丢掉本机缓存、极慢）
-- 不要修改 `minecolonies-release-1.20/`
+- 不要修改本地 MineColonies 源码树（`minecolonies-1.20.1-1.1.873/`、`minecolonies-1.20.1-1.1.1214/`；旧 `minecolonies-release-1.20/` 可删）
 
 ## Git
 

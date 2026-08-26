@@ -248,7 +248,7 @@ The codebase follows the style visible in the existing files. When editing, pref
 ## Notes for AI Agents
 
 - Design and technical specs for later sessions live under `文档/` (index: `文档/索引.md`). `CONTEXT.md` only lists that tree.
-- Do **not** modify `minecolonies-release-1.20/`. It is a local reference copy, is gitignored, and is not part of the Gradle project. Package map and `coremod`→`core` rename notes: `文档/技术/模拟殖民地挂钩.md`.
+- Do **not** modify local MineColonies source trees (`minecolonies-1.20.1-1.1.873/`, `minecolonies-1.20.1-1.1.1214/`, legacy `minecolonies-release-1.20/`). They are gitignored reference copies. Package map: `文档/技术/模拟殖民地挂钩.md`.
 - Preserve the `org.Artificial` package name exactly (capital `A`).
 - When adding a new network message, register it in `ModNetwork.register()` and bump the protocol string if the wire format changes incompatibly.
 - When adding new translation keys, mirror them in both `en_us.json` and `zh_cn.json`.
