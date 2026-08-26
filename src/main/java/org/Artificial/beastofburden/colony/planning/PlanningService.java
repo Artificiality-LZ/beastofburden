@@ -91,7 +91,7 @@ public final class PlanningService
             final var hut = ColdStartManager.getBuildingAt(colony, target.location());
             if (hut != null)
             {
-                ColdStartManager.tryHireBuilder(colony, hut);
+                ColdStartManager.bootstrap(colony, hut);
             }
             planner.startRetryCooldown(Math.max(MIN_SUCCESS_COOLDOWN_PASSES, ColonyPlanner.coldStartPlanCooldown()));
         }
@@ -100,13 +100,11 @@ public final class PlanningService
             planner.startRetryCooldown(Math.max(MIN_SUCCESS_COOLDOWN_PASSES, ColonyPlanner.planRetryCooldown()));
         }
 
-        planner.getScriptedStrategy().noteSuccessfulPlacement();
         planner.getReport().placed(task, target.location(), builder, result.note());
         planner.setLastDecision(planner.getReport().getDecision());
         BeastofBurdenLog.info("Colony {} planned {} at {}", colony.getID(), task.getType(), target.location());
 
         return new ColonyPlanner.PlanningResult(
-          planner.getPhaseId(),
           task,
           target.location(),
           builder,

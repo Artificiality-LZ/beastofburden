@@ -49,13 +49,14 @@ public final class ColonyPlannerDriver
 
         if (ColdStartManager.isBootstrapping(colony))
         {
-            syncWaiting(module, planner, "builder_construction_pending", coldStartNote);
+            syncWaiting(module, planner, ColdStartManager.waitingDecision(coldStartNote), coldStartNote);
             return;
         }
 
         if (!PlanningWorkload.canAttemptPlanning(colony)
               && !PlanningConfig.instantBuildDebug()
-              && FieldPlanner.findFarmerNeedingField(colony) == null)
+              && FieldPlanner.findFarmerNeedingField(colony) == null
+              && FieldPlanner.findFarmerWithSpareCapacity(colony) == null)
         {
             final int builders = PlanningWorkload.countBuilderHuts(colony);
             final int active = PlanningWorkload.countActiveConstructionOrders(colony);

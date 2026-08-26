@@ -7,19 +7,23 @@ import com.minecolonies.api.colony.buildings.HiringMode;
 import com.minecolonies.api.colony.buildings.IBuilding;
 import com.minecolonies.api.colony.buildings.ModBuildings;
 import com.minecolonies.api.colony.buildings.modules.IAssignsCitizen;
-import com.minecolonies.api.colony.jobs.ModJobs;
 import net.minecraft.core.BlockPos;
 import org.Artificial.beastofburden.util.BeastofBurdenLog;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Small bootstrap helper for the first builder hut.
+ * Bootstrap helper for the first builder hut.
+ * <p>
+ * MineColonies rejects a construction work order when no builder is assigned yet
+ * ({@code BUILDER_NECESSARY} / {@code BUILDER_TOO_FAR_AWAY}). Cold start therefore:
+ * place the hut block → hire a jobless citizen as builder → then request construction.
  */
 public final class ColdStartManager
 {
     private ColdStartManager()
     {
+        throw new IllegalStateException("Utility class");
     }
 
     public static boolean isOperationalBuilderHut(@NotNull final IBuilding building)
@@ -55,6 +59,16 @@ public final class ColdStartManager
         return isColdStart(colony) && hasPendingBuilderHut(colony);
     }
 
+    /**
+     * First builder hut: keep the block in the world and hire before creating a work order.
+     */
+    public static boolean shouldDeferWorkOrder(@NotNull final IColony colony, @NotNull final BuildTask task)
+    {
+        return task.getType() == PlannedBuildingType.BUILDER
+          && task.getAction() == BuildTaskAction.BUILD_NEW
+          && isColdStart(colony);
+    }
+
     @NotNull
     public static String tick(@NotNull final IColony colony)
     {
@@ -63,15 +77,99 @@ public final class ColdStartManager
         {
             return "";
         }
+        return bootstrap(colony, hut);
+    }
 
-        final HireResult result = tryHireBuilder(colony, hut);
-        return switch (result)
+    /**
+     * Hire a builder into the unbuilt hut if needed, then request its construction work order.
+     */
+    @NotNull
+    public static String bootstrap(@NotNull final IColony colony, @NotNull final IBuilding hut)
+    {
+        if (isOperationalBuilderHut(hut))
         {
-            case HIRED -> "cold_start:hired@" + hut.getPosition().toShortString();
-            case NO_WORKER -> "cold_start:waiting_for_citizen";
-            case FAILED -> "cold_start:hire_failed";
-            case NOT_APPLICABLE -> "cold_start:builder_hut_pending";
-        };
+            final HireResult hire = tryHireBuilder(colony, hut);
+            return hire == HireResult.HIRED
+              ? "cold_start:hired@" + hut.getPosition().toShortString()
+              : "";
+        }
+
+        final HireResult hire = tryHireBuilder(colony, hut);
+        if (hire == HireResult.NO_WORKER)
+        {
+            return "cold_start:waiting_for_citizen";
+        }
+        if (hire == HireResult.FAILED)
+        {
+            return "cold_start:hire_failed";
+        }
+        if (hut.getAllAssignedCitizen().isEmpty())
+        {
+            return "cold_start:waiting_for_citizen";
+        }
+
+        if (PlanningWorkOrders.hasConstructionOrderAt(colony, hut.getPosition()))
+        {
+            return hire == HireResult.HIRED
+              ? "cold_start:hired@" + hut.getPosition().toShortString()
+              : "cold_start:builder_hut_pending";
+        }
+
+        if (!requestConstruction(colony, hut))
+        {
+            return "cold_start:work_order_failed";
+        }
+
+        return hire == HireResult.HIRED
+          ? "cold_start:hired@" + hut.getPosition().toShortString()
+          : "cold_start:work_order_requested";
+    }
+
+    /**
+     * Town Hall waiting token while the first builder hut is not yet operational.
+     */
+    @NotNull
+    public static String waitingDecision(@NotNull final String bootstrapNote)
+    {
+        if (bootstrapNote.contains("waiting_for_citizen") || bootstrapNote.contains("hire_failed"))
+        {
+            return "waiting_for_builder";
+        }
+        if (bootstrapNote.contains("work_order_failed"))
+        {
+            return "work_order_failed";
+        }
+        return "builder_construction_pending";
+    }
+
+    private static boolean requestConstruction(@NotNull final IColony colony, @NotNull final IBuilding hut)
+    {
+        final BlockPos hutPos = hut.getPosition();
+        if (PlanningWorkOrders.hasConstructionOrderAt(colony, hutPos))
+        {
+            return true;
+        }
+
+        try
+        {
+            // Claim the order on this hut so the newly hired builder can build their own workplace.
+            // Passing ZERO makes MineColonies treat the site as "too far from any builder".
+            hut.requestUpgrade(null, hutPos);
+        }
+        catch (final RuntimeException ex)
+        {
+            BeastofBurdenLog.warn("Cold start: failed to request builder hut construction at {} in colony {}: {}", hutPos, colony.getID(), ex.toString());
+            return false;
+        }
+
+        if (!PlanningWorkOrders.hasConstructionOrderAt(colony, hutPos))
+        {
+            BeastofBurdenLog.warn("Cold start: no work order after requesting builder hut construction at {}", hutPos);
+            return false;
+        }
+
+        BeastofBurdenLog.info("Cold start: requested construction of builder hut at {}", hutPos);
+        return true;
     }
 
     @NotNull

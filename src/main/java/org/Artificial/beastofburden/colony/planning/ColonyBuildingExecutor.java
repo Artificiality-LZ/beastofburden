@@ -216,6 +216,15 @@ public final class ColonyBuildingExecutor
 
             placeConstructionTape(building.getCorners(), world, colony);
 
+            if (ColdStartManager.shouldDeferWorkOrder(colony, task))
+            {
+                BeastofBurdenLog.info(
+                  "Placed first builder hut at {} without a work order; hiring a builder comes next.",
+                  location
+                );
+                return ExecutionResult.success(location, task.getType(), task.getReason());
+            }
+
             building.requestUpgrade(null, builderPos);
             if (!PlanningWorkOrders.hasConstructionOrderAt(colony, location))
             {
