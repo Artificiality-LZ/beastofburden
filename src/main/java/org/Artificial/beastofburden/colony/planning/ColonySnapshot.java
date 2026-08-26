@@ -131,21 +131,6 @@ public final class ColonySnapshot
         return hasActiveCourier;
     }
 
-    public boolean hasSawmill()
-    {
-        return hasSawmill;
-    }
-
-    public boolean hasStonemason()
-    {
-        return hasStonemason;
-    }
-
-    public boolean hasBlacksmith()
-    {
-        return hasBlacksmith;
-    }
-
     public boolean hasUniversity()
     {
         return hasUniversity;
@@ -241,13 +226,6 @@ public final class ColonySnapshot
         return getBuiltCount(PlannedBuildingType.FARMER) > 0
           || getBuiltCount(PlannedBuildingType.FORESTER) > 0
           || getBuiltCount(PlannedBuildingType.MINER) > 0;
-    }
-
-    public int countBasicResourceBuildings()
-    {
-        return getBuiltCount(PlannedBuildingType.FARMER)
-          + getBuiltCount(PlannedBuildingType.FORESTER)
-          + getBuiltCount(PlannedBuildingType.MINER);
     }
 
     @NotNull

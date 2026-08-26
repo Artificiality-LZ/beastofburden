@@ -4,7 +4,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Live work status for one assigned beast-of-burden citizen.
@@ -156,25 +155,6 @@ public final class BeastWorkStatus
           0,
           0,
           detail
-        );
-    }
-
-    @NotNull
-    public static BeastWorkStatus planningIdle(
-      final int citizenId,
-      @NotNull final String citizenName,
-      @NotNull final String phase,
-      @Nullable final String lastDecision)
-    {
-        return new BeastWorkStatus(
-          citizenId,
-          citizenName,
-          BeastWorkPhase.PLANNING,
-          ResourceLocation.fromNamespaceAndPath("minecraft", "air"),
-          0,
-          0,
-          0,
-          phase + (lastDecision == null || lastDecision.isEmpty() ? "" : ": " + lastDecision)
         );
     }
 

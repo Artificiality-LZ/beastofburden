@@ -75,11 +75,6 @@ public final class ScriptedPlanningStrategy implements PlanningStrategy
         return currentStepIndex >= script.stepCount();
     }
 
-    public void noteSuccessfulPlacement()
-    {
-        // Progress is derived from live colony/work-order state on the next pass.
-    }
-
     @Override
     @Nullable
     public BuildTask selectNextTask(@NotNull final PlanningContext context)
@@ -184,25 +179,25 @@ public final class ScriptedPlanningStrategy implements PlanningStrategy
     @Nullable
     private static BuildTask taskForFields(@NotNull final PlanningContext context, @NotNull final FixedPlanRequirement requirement)
     {
-        if (ScriptedPlanProgress.countFields(context.colony()) >= requirement.getCount())
+        if (ScriptedPlanProgress.isFieldRequirementSatisfied(context.colony(), requirement.getCount()))
         {
             return null;
         }
 
-        final BlockPos farmerPos = FieldPlanner.findFarmerNeedingField(context.colony());
-        if (farmerPos == null)
+        final BlockPos farmerPos = FieldPlanner.findFarmerWithSpareCapacity(context.colony());
+        if (farmerPos != null)
         {
-            return null;
+            return new BuildTask(
+              PlannedBuildingType.FARMER,
+              BuildTaskAction.PLACE_FIELD,
+              1,
+              TASK_PRIORITY,
+              farmerPos,
+              "scripted_field"
+            );
         }
 
-        return new BuildTask(
-          PlannedBuildingType.FARMER,
-          BuildTaskAction.PLACE_FIELD,
-          1,
-          TASK_PRIORITY,
-          farmerPos,
-          "scripted_field"
-        );
+        return null;
     }
 
     @Nullable
@@ -277,7 +272,7 @@ public final class ScriptedPlanningStrategy implements PlanningStrategy
                 builder.append(" ")
                   .append(ScriptedPlanProgress.countFields(context.colony()))
                   .append("/")
-                  .append(requirement.getCount());
+                  .append(ScriptedPlanProgress.effectiveFieldTarget(context.colony(), requirement.getCount()));
             }
         }
         return builder.toString();

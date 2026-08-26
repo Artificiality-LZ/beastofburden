@@ -95,47 +95,6 @@ public final class PlanningReport
         return detail;
     }
 
-    @NotNull
-    public String formatSummary()
-    {
-        final StringBuilder builder = new StringBuilder();
-        if (!intent.isEmpty())
-        {
-            builder.append(intent);
-            if (!action.isEmpty())
-            {
-                builder.append(" (").append(action).append(')');
-            }
-            if (!reason.isEmpty())
-            {
-                builder.append(" - ").append(reason);
-            }
-            if (!location.isEmpty())
-            {
-                builder.append(" @ ").append(location);
-            }
-            if (!this.builder.isEmpty())
-            {
-                builder.append(" via ").append(this.builder);
-            }
-            if (!note.isEmpty())
-            {
-                builder.append(" [").append(note).append(']');
-            }
-            return builder.toString();
-        }
-
-        if (!decision.isEmpty())
-        {
-            builder.append(decision);
-            if (!note.isEmpty())
-            {
-                builder.append(": ").append(note);
-            }
-        }
-        return builder.toString();
-    }
-
     public void readFromNbt(@Nullable final CompoundTag tag)
     {
         if (tag == null)

@@ -74,7 +74,6 @@ public class ItemGenerationTask
         this.progressTicks = 0;
         this.lastGenerationDuration = 0;
         job.getAsyncRequests().add(currentRequest.getId());
-        ColonyRequestEventHandler.getQueue(colony).markInFlight(currentRequest.getId());
         return true;
     }
 

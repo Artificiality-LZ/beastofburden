@@ -37,55 +37,6 @@ public final class RoadPlanner
     {
     }
 
-    public static boolean isAccessible(@NotNull final IColony colony, @NotNull final BlockPos anchor)
-    {
-        return isAccessible(colony, anchor, collectNetworkNodes(colony));
-    }
-
-    public static boolean isAccessible(
-      @NotNull final IColony colony,
-      @NotNull final BlockPos anchor,
-      @NotNull final Set<BlockPos> network)
-    {
-        final Level world = colony.getWorld();
-        if (world == null)
-        {
-            return true;
-        }
-
-        final BlockPos ground = surfacePos(world, anchor);
-        if (!colony.isCoordInColony(world, ground))
-        {
-            return false;
-        }
-
-        if (ColdStartManager.isColdStart(colony))
-        {
-            final BlockPos center = surfacePos(world, colony.getCenter());
-            final long maxDistSq = (long) PlanningConfig.searchRadius() * PlanningConfig.searchRadius();
-            if (ground.distSqr(center) <= maxDistSq)
-            {
-                return true;
-            }
-        }
-
-        for (final BlockPos node : network)
-        {
-            if (node.distSqr(ground) <= nearNetworkDistanceSq())
-            {
-                return true;
-            }
-        }
-
-        return findWalkDistance(world, colony, ground, network) <= MAX_ACCESS_STEPS;
-    }
-
-    private static int nearNetworkDistanceSq()
-    {
-        final int radius = Math.max(40, PlanningConfig.searchRadius() / 2);
-        return radius * radius;
-    }
-
     public static void paveEntrance(@NotNull final IColony colony, @NotNull final BlockPos anchor, @NotNull final Direction facing)
     {
         final Level world = colony.getWorld();
@@ -132,6 +83,12 @@ public final class RoadPlanner
         {
             BeastofBurdenLog.info("Colony {} paved {} road blocks toward {}", colony.getID(), paved, entrance.toShortString());
         }
+    }
+
+    private static int nearNetworkDistanceSq()
+    {
+        final int radius = Math.max(40, PlanningConfig.searchRadius() / 2);
+        return radius * radius;
     }
 
     public static double roadScoreBonus(@NotNull final IColony colony, @NotNull final BlockPos anchor)

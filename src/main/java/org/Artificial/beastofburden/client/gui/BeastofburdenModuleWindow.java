@@ -20,7 +20,6 @@ import org.Artificial.beastofburden.network.ModNetwork;
 import org.Artificial.beastofburden.network.CyclePlanningModeMessage;
 import org.Artificial.beastofburden.network.ToggleAutonomousPlanningMessage;
 import org.Artificial.beastofburden.colony.buildings.modules.TownHallBeastofburdenModuleView;
-import org.Artificial.beastofburden.colony.planning.ColonyPhase;
 import org.Artificial.beastofburden.colony.planning.FixedPlanScript;
 import org.Artificial.beastofburden.colony.planning.FixedPlanStep;
 import org.Artificial.beastofburden.colony.planning.PlanningDisplayFormatter;
@@ -143,7 +142,6 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
           snapshot.getPlanningMode(),
           snapshot.getScriptedStepIndex(),
           snapshot.getScriptedStepCount(),
-          snapshot.getPlanningPhase(),
           snapshot.getPlanningLastDecision(),
           snapshot.getPlanningDetail(),
           snapshot.getPlanningRetryCooldown(),
@@ -209,7 +207,6 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
       @NotNull final PlanningMode mode,
       final int scriptedStepIndex,
       final int scriptedStepCount,
-      @NotNull final ColonyPhase phase,
       @NotNull final String lastDecision,
       @NotNull final String planningDetail,
       final int planningRetryCooldown,
@@ -262,19 +259,11 @@ public class BeastofburdenModuleWindow extends SpecialAssignmentModuleWindow
         }
         else if (lastDecision.isEmpty())
         {
-            status.setText(Component.translatable(
-              "com.beastofburden.gui.townhall.planning_phase",
-              Component.translatable("com.beastofburden.gui.townhall.phase." + phase.name().toLowerCase(Locale.ROOT))
-            ));
+            status.setText(Component.translatable("com.beastofburden.gui.townhall.planning.idle"));
         }
         else
         {
-            final Component decision = resolvePlanningDecision(lastDecision);
-            status.setText(Component.translatable(
-              "com.beastofburden.gui.townhall.planning_status",
-              Component.translatable("com.beastofburden.gui.townhall.phase." + phase.name().toLowerCase(Locale.ROOT)),
-              decision
-            ));
+            status.setText(resolvePlanningDecision(lastDecision));
         }
 
         if (detail != null)

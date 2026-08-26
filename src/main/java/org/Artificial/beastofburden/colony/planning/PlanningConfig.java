@@ -23,11 +23,6 @@ public final class PlanningConfig
         return cooldownPasses(Config.planningColdStartCooldown);
     }
 
-    public static int placementFailureCooldown()
-    {
-        return cooldownPasses(Config.planningPlacementFailureCooldown);
-    }
-
     public static int searchRadius()
     {
         return Config.planningSearchRadius;
@@ -51,11 +46,6 @@ public final class PlanningConfig
     public static int minBlueprintSeparation()
     {
         return Config.planningMinBlueprintSeparation;
-    }
-
-    public static boolean requireRoadAccess()
-    {
-        return Config.planningRequireRoadAccess;
     }
 
     public static boolean instantBuildDebug()

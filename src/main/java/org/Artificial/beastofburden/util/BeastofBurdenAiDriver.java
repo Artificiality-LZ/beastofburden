@@ -9,9 +9,8 @@ import org.jetbrains.annotations.NotNull;
  * Drives beast-of-burden job AI when there is queued or in-progress colony work.
  * <p>
  * Called every server tick from {@link org.Artificial.beastofburden.event.BeastofBurdenWorkDriver}.
- * MineColonies {@code CitizenAI} also ticks job AI in {@code WORKING}, but TownHall beasts may
- * stay in {@code IDLE} while still showing work from {@code setVisibleStatus}; this driver ensures
- * generation and delivery still advance.
+ * MineColonies {@code CitizenAI} may also tick job AI while {@code WORKING}.
+ * {@link EntityAIBeastofburden#tick()} ignores a second call in the same game tick.
  */
 public final class BeastofBurdenAiDriver
 {

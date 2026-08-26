@@ -43,6 +43,8 @@ public class EntityAIBeastofburden extends AbstractAISkeleton<JobBeastofburden>
 
     private int progressSyncCooldown;
 
+    private long lastProcessedGameTime = Long.MIN_VALUE;
+
     public EntityAIBeastofburden(@NotNull final JobBeastofburden job)
     {
         super(job);
@@ -55,6 +57,25 @@ public class EntityAIBeastofburden extends AbstractAISkeleton<JobBeastofburden>
           new AITarget(BeastofBurdenState.GENERATE_ITEM, this::tickGenerateItem, 1),
           new AITarget(BeastofBurdenState.DELIVER_ITEM, this::tickDeliverItem, 1)
         );
+    }
+
+    /**
+     * Ignore a second tick in the same game tick (MineColonies CitizenAI plus {@code BeastofBurdenWorkDriver}).
+     */
+    @Override
+    public void tick()
+    {
+        final var world = worker.level();
+        if (world != null)
+        {
+            final long gameTime = world.getGameTime();
+            if (gameTime == lastProcessedGameTime)
+            {
+                return;
+            }
+            lastProcessedGameTime = gameTime;
+        }
+        super.tick();
     }
 
     @NotNull
@@ -77,16 +98,11 @@ public class EntityAIBeastofburden extends AbstractAISkeleton<JobBeastofburden>
     }
 
     /**
-     * @return true while the beast is actively generating or delivering (not merely queued).
+     * @return true while this beast is actively generating or delivering.
      */
     public boolean isExecutingLogisticsWork()
     {
-        if (generationTask.isWorking() || generationTask.hasPendingDelivery())
-        {
-            return true;
-        }
-
-        return ColonyRequestEventHandler.getQueue(job.getColony()).hasInFlight();
+        return generationTask.isWorking() || generationTask.hasPendingDelivery();
     }
 
     @Override
@@ -300,9 +316,13 @@ public class EntityAIBeastofburden extends AbstractAISkeleton<JobBeastofburden>
 
     private boolean deliverRequest(@NotNull final IColony colony, @NotNull final IRequest<?> request, @NotNull final ItemStack stack)
     {
-        final ItemStack delivery = stack.copy();
-        InventoryUtils.removeStackFromItemHandler(worker.getInventoryCitizen(), delivery, delivery.getCount());
-        return ColonyLogistics.fulfillRequest(colony, request, delivery);
+        if (!ColonyLogistics.fulfillRequest(colony, request, stack))
+        {
+            return false;
+        }
+
+        InventoryUtils.removeStackFromItemHandler(worker.getInventoryCitizen(), stack.copy(), stack.getCount());
+        return true;
     }
 
     private void updateWorkStatus(final boolean working)

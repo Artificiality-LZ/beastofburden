@@ -18,8 +18,8 @@
 
 **Autonomous colony planning** — When enabled at the Town Hall, beasts plan the next hut, field, or upgrade while builders are available. Two modes are supported:
 
-- **Scripted** — Follows a fixed build order (customizable via the plan editor).
-- **Heuristic** — Adapts to the colony's current development phase (experimental).
+- **Scripted** — Follows a fixed build order (customizable via the plan editor). This is the supported 1.0 path.
+- **Heuristic** — Score-based next building (experimental; not a complete build catalog).
 
 **Town Hall module** — No dedicated hut required. Hire beasts from the Town Hall tab, view live work status, progress bars, and work history. Capacity scales with Town Hall level (1 / 2 / 3 beasts at levels 1–2 / 3–4 / 5).
 
@@ -29,13 +29,13 @@
 |-----------|---------|
 | Minecraft | 1.20.1 |
 | Forge | 47.4.20+ |
-| MineColonies | 1.1.873 (not 1.1.1214+) |
+| MineColonies | 1.1.873+ |
 
 MineColonies pulls in its own dependencies (Structurize, BlockUI, Domum Ornamentum, Multi-Piston). Install them via your launcher or mod pack; do not distribute their jars from this repository.
 
 ### Installation
 
-1. Install **Minecraft 1.20.1**, **Forge 47+**, and **MineColonies 1.1.873** (not 1.1.1214+) with its dependencies.
+1. Install **Minecraft 1.20.1**, **Forge 47+**, and **MineColonies 1.1.873 or newer** with its dependencies.
 2. Download the latest `beastofburden-*.jar` from [Releases](https://github.com/Artificiality-LZ/beastofburden/releases) (or build from source).
 3. Place the jar in your `mods` folder.
 4. Start a world, build a Town Hall, and open the **Beast of Burden** tab to hire workers.
@@ -44,7 +44,7 @@ MineColonies pulls in its own dependencies (Structurize, BlockUI, Domum Ornament
 
 In-game: **Mods** → **BeastOfBurden** → config screen (generation timing, item values, work log limits).
 
-Server config file: `world/serverconfig/beastofburden-server.toml` (after first run).
+Common config file (after first run): `config/beastofburden-common.toml` (Forge COMMON spec, not `serverconfig`).
 
 ### Building from Source
 
@@ -59,11 +59,18 @@ cd beastofburden
 
 See [AGENTS.md](AGENTS.md) for a detailed project overview for contributors.
 
+### Known limitations
+
+- The stuck-request queue and in-progress generation/delivery live in memory only. After a restart or world unload, requests are re-scanned; a generation that was in progress is discarded.
+- Scripted field steps count fields **colony-wide**, not “N fields per farmer”.
+- `/beastofburden planningInstantBuild` is not persisted; it resets to off on restart.
+- Heuristic mode does not plan sawmill / stonemason / blacksmith huts, so university is rarely reached. Use scripted mode for a complete path.
+
 ### Contributing
 
 Issues and pull requests are welcome on [GitHub](https://github.com/Artificiality-LZ/beastofburden).
 
-This mod uses MineColonies internals; upstream MineColonies updates may require compatibility fixes. It targets MineColonies **1.1.873** and is **not** compatible with 1.1.1214+.
+This mod uses MineColonies internals; upstream MineColonies updates may require compatibility fixes. It targets MineColonies **1.1.873 and newer**.
 
 ### License
 
@@ -81,14 +88,14 @@ If you distribute modified versions of this mod, you must also release the corre
 
 **自主规划殖民地** — 在市政厅开启后，当建筑工空闲时，牛马会自动规划下一座小屋、农田或升级。支持两种模式：
 
-- **固定式** — 按预设顺序建造（可通过「编辑建造计划」自定义）。
-- **启发式** — 根据殖民地发展阶段智能决策（实验性功能）。
+- **固定式** — 按预设顺序建造（可通过「编辑建造计划」自定义）。这是 1.0 的完整路径。
+- **启发式** — 按殖民地现状打分选下一座（实验性；建筑目录不完整）。
 
 **市政厅模块** — 无需单独盖小屋。在市政厅「牛马」标签页雇佣、查看当前工作与进度条、浏览工作记录。可雇佣数量随市政厅等级提升（1–2 级 1 名，3–4 级 2 名，5 级 3 名）。
 
 ### 安装
 
-1. 安装 **Minecraft 1.20.1**、**Forge 47+** 及 **模拟殖民地（MineColonies）1.1.873**（不要使用 1.1.1214+）及其依赖。
+1. 安装 **Minecraft 1.20.1**、**Forge 47+** 及 **模拟殖民地（MineColonies）1.1.873 或更新** 及其依赖。
 2. 从 [Releases](https://github.com/Artificiality-LZ/beastofburden/releases) 下载 jar，或自行编译。
 3. 将 jar 放入 `mods` 文件夹，进游戏建造市政厅，在「牛马」标签页雇佣即可。
 
@@ -102,6 +109,15 @@ cd beastofburden
 ```
 
 需要 **Java 17**。更多开发说明见 [AGENTS.md](AGENTS.md)。
+
+配置文件（首次运行后）：`config/beastofburden-common.toml`（Forge COMMON，不是 `serverconfig`）。
+
+### 已知限制
+
+- 卡住请求队列与进行中的生成/配送只存在内存里：重启或卸载世界后会重新扫描，进行中的生成作废。
+- 固定式计划里的农田数量按**全殖民地**统计，不是「每个农夫 N 块田」。
+- `/beastofburden planningInstantBuild` 瞬间建造不写盘，重启后恢复为关闭。
+- 启发式不会主动建锯木厂 / 石匠 / 铁匠，因此很难自然点到大学；完整发展请用固定式。
 
 ### 许可证
 

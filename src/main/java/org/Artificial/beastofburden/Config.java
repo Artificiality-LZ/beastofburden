@@ -25,13 +25,6 @@ public class Config
             .comment("Log beast-of-burden request scanning and AI decisions (for troubleshooting).")
             .define("debugLogging", false);
 
-    private static final ForgeConfigSpec.BooleanValue PLANNING_TRACE_LOGGING = BUILDER
-            .comment(
-              "Print high-frequency [beastofburden/trace] lines for planning gates, beast work, and UI sync.",
-              "Logs every ~2s and immediately when state changes. Disable to reduce console noise."
-            )
-            .define("planningTraceLogging", true);
-
     private static final ForgeConfigSpec.IntValue BASE_GENERATION_TICKS = BUILDER
             .comment("Base generation time in ticks before item value and skill modifiers.")
             .defineInRange("baseGenerationTicks", 60, 1, 20_000);
@@ -64,10 +57,6 @@ public class Config
             .comment("Days of work history shown in the UI (0 = show all stored entries).")
             .defineInRange("workLogHistoryDays", 100, 0, 10_000);
 
-    private static final ForgeConfigSpec.IntValue PLANNING_PHASE_EVAL_INTERVAL = BUILDER
-            .comment("Ticks between full colony phase re-evaluations.")
-            .defineInRange("planningPhaseEvaluationInterval", 24000, 200, 240000);
-
     private static final ForgeConfigSpec.IntValue PLANNING_RETRY_COOLDOWN = BUILDER
             .comment(
               "Planning passes to wait after an idle or failed planning pass.",
@@ -81,13 +70,6 @@ public class Config
               "The first builder hut construction already blocks further planning, so this should stay small."
             )
             .defineInRange("planningColdStartCooldown", 1, 0, 20);
-
-    private static final ForgeConfigSpec.IntValue PLANNING_PLACEMENT_FAILURE_COOLDOWN = BUILDER
-            .comment(
-              "Planning passes to wait after a failed hut anchor placement.",
-              "This is counted in Town Hall module ticks, not normal Minecraft game ticks."
-            )
-            .defineInRange("planningPlacementFailureCooldown", 2, 0, 20);
 
     private static final ForgeConfigSpec.IntValue PLANNING_SEARCH_RADIUS = BUILDER
             .comment("Horizontal search radius for new hut placement.")
@@ -109,17 +91,6 @@ public class Config
             .comment("Minimum empty blocks between hut blueprint bounds (0 = touching allowed).")
             .defineInRange("planningMinBlueprintSeparation", 4, 0, 16);
 
-    private static final ForgeConfigSpec.BooleanValue PLANNING_REQUIRE_ROAD_ACCESS = BUILDER
-            .comment(
-              "When true, only accept placements reachable from the colony core / built huts.",
-              "When false, unreachable sites are still allowed but ranked lower."
-            )
-            .define("planningRequireRoadAccess", false);
-
-    private static final ForgeConfigSpec.IntValue PLANNING_RESEARCH_TICK_INTERVAL = BUILDER
-            .comment("Ticks between autonomous university research attempts.")
-            .defineInRange("planningResearchTickInterval", 600, 40, 24000);
-
     private static final ForgeConfigSpec.ConfigValue<List<? extends String>> ITEM_VALUES = BUILDER
             .comment(
               "Explicit item values as 'namespace:path=value'.",
@@ -131,7 +102,6 @@ public class Config
     static final ForgeConfigSpec SPEC = BUILDER.build();
 
     public static boolean debugLogging;
-    public static boolean planningTraceLogging = true;
     public static int baseGenerationTicks;
     public static int minGenerationTicks;
     public static double ticksPerItemValue;
@@ -140,17 +110,13 @@ public class Config
     public static boolean deriveFromRecipes;
     public static int workLogMaxEntries;
     public static int workLogHistoryDays;
-    public static int planningPhaseEvaluationInterval;
     public static int planningRetryCooldown;
     public static int planningColdStartCooldown;
-    public static int planningPlacementFailureCooldown;
     public static int planningSearchRadius;
     public static int planningMaxCandidates;
     public static int planningBuilderRadius;
     public static int planningMaxBuilderQueue;
     public static int planningMinBlueprintSeparation;
-    public static boolean planningRequireRoadAccess;
-    public static int planningResearchTickInterval;
     public static Map<Item, Integer> explicitItemValues = Map.of();
 
     private static List<String> defaultItemValueEntries()
@@ -246,7 +212,6 @@ public class Config
         }
 
         debugLogging = DEBUG_LOGGING.get();
-        planningTraceLogging = PLANNING_TRACE_LOGGING.get();
         baseGenerationTicks = BASE_GENERATION_TICKS.get();
         minGenerationTicks = MIN_GENERATION_TICKS.get();
         ticksPerItemValue = TICKS_PER_ITEM_VALUE.get();
@@ -255,17 +220,13 @@ public class Config
         deriveFromRecipes = DERIVE_FROM_RECIPES.get();
         workLogMaxEntries = WORK_LOG_MAX_ENTRIES.get();
         workLogHistoryDays = WORK_LOG_HISTORY_DAYS.get();
-        planningPhaseEvaluationInterval = PLANNING_PHASE_EVAL_INTERVAL.get();
         planningRetryCooldown = PLANNING_RETRY_COOLDOWN.get();
         planningColdStartCooldown = PLANNING_COLD_START_COOLDOWN.get();
-        planningPlacementFailureCooldown = PLANNING_PLACEMENT_FAILURE_COOLDOWN.get();
         planningSearchRadius = PLANNING_SEARCH_RADIUS.get();
         planningMaxCandidates = PLANNING_MAX_CANDIDATES.get();
         planningBuilderRadius = PLANNING_BUILDER_RADIUS.get();
         planningMaxBuilderQueue = PLANNING_MAX_BUILDER_QUEUE.get();
         planningMinBlueprintSeparation = PLANNING_MIN_BLUEPRINT_SEPARATION.get();
-        planningRequireRoadAccess = PLANNING_REQUIRE_ROAD_ACCESS.get();
-        planningResearchTickInterval = PLANNING_RESEARCH_TICK_INTERVAL.get();
 
         final Map<Item, Integer> parsed = new HashMap<>();
         for (final String entry : ITEM_VALUES.get())

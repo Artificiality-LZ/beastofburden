@@ -129,12 +129,6 @@ public final class ColonyPlanner
     }
 
     @NotNull
-    public String describePlanningState(@NotNull final IColony colony, @NotNull final ColonySnapshot snapshot)
-    {
-        return report.getDetail();
-    }
-
-    @NotNull
     public String getLastDecision()
     {
         return lastDecision;
@@ -146,7 +140,7 @@ public final class ColonyPlanner
     }
 
     /**
-     * Kept only for the existing client snapshot field. Planning no longer uses phases.
+     * Snapshot/NBT compatibility only. Planning no longer uses development phases.
      */
     @NotNull
     public ColonyPhase getCurrentPhaseOrDefault()
@@ -154,31 +148,10 @@ public final class ColonyPlanner
         return ColonyPhase.P0_FOUNDATION;
     }
 
-    @Nullable
-    public ColonyPhase getCurrentPhase()
-    {
-        return ColonyPhase.P0_FOUNDATION;
-    }
-
-    public void syncBootstrapState(@NotNull final IColony colony)
-    {
-    }
-
-    public void updateBootstrapTransition(@NotNull final IColony colony)
-    {
-    }
-
     public void readFromNbt(
-      final int phaseId,
-      final int emergencyDays,
-      final int recoveryDays,
-      final int phaseCooldown,
       final int retryCooldown,
-      final int researchCooldown,
-      @Nullable final CompoundTag debugTag,
-      @Nullable final CompoundTag blocklistTag,
-      final long gameTime,
       final int planningModeId,
+      @Nullable final CompoundTag debugTag,
       @Nullable final CompoundTag scriptedTag)
     {
         this.retryCooldown = retryCooldown;
@@ -187,34 +160,9 @@ public final class ColonyPlanner
         report.readFromNbt(debugTag);
     }
 
-    public int getResearchCooldown()
-    {
-        return 0;
-    }
-
-    public int getPhaseCooldown()
-    {
-        return 0;
-    }
-
     public int getRetryCooldown()
     {
         return retryCooldown;
-    }
-
-    public int getPhaseId()
-    {
-        return ColonyPhase.P0_FOUNDATION.ordinal();
-    }
-
-    public int getEmergencyDays()
-    {
-        return 0;
-    }
-
-    public int getRecoveryDays()
-    {
-        return 0;
     }
 
     @NotNull
@@ -223,14 +171,7 @@ public final class ColonyPlanner
         return report.writeToNbt();
     }
 
-    @NotNull
-    public CompoundTag writeBlocklistNbt(final long gameTime)
-    {
-        return new CompoundTag();
-    }
-
     public record PlanningResult(
-      int phaseId,
       @NotNull BuildTask task,
       @NotNull BlockPos location,
       @NotNull BlockPos builder,

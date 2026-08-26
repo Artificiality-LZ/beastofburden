@@ -20,6 +20,10 @@ build
 # other
 eclipse
 run
+run-data
+
+# Accidental ForgeGradle class dumps at repo root (not source)
+/net/
 
 # Files from Forge MDK
 forge*changelog.txt

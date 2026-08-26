@@ -63,6 +63,7 @@ public class BeastofBurdenRequestQueue
                 continue;
             }
 
+            inFlightTokens.add(queued.token());
             return request;
         }
 
@@ -74,12 +75,6 @@ public class BeastofBurdenRequestQueue
         trackedTokens.remove(token);
         inFlightTokens.remove(token);
         queue.removeIf(entry -> entry.token().equals(token));
-    }
-
-    public synchronized void markInFlight(@NotNull final IToken<?> token)
-    {
-        trackedTokens.remove(token);
-        inFlightTokens.add(token);
     }
 
     public synchronized void clearInFlight(@NotNull final IToken<?> token)

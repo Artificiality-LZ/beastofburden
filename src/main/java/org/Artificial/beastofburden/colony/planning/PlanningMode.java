@@ -7,9 +7,9 @@ import org.jetbrains.annotations.NotNull;
  */
 public enum PlanningMode
 {
-    /** Weighted scoring over colony phase (experimental). */
+    /** Score-based next building from the current colony snapshot (experimental). */
     HEURISTIC,
-    /** Fixed step sequence from {@link FixedPlanScript}. */
+    /** Fixed step sequence from {@link FixedPlanScript}. Supported 1.0 path. */
     SCRIPTED;
 
     public static final PlanningMode DEFAULT = SCRIPTED;
