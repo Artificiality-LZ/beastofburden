@@ -5,6 +5,7 @@ import com.minecolonies.api.colony.ICitizenDataView;
 import com.minecolonies.api.colony.jobs.registry.JobEntry;
 import com.minecolonies.core.colony.buildings.moduleviews.WorkerBuildingModuleView;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import org.Artificial.beastofburden.client.gui.BeastofburdenModuleWindow;
 import org.Artificial.beastofburden.colony.jobs.BeastofburdenJobs;
 import org.Artificial.beastofburden.colony.planning.ColonyPhase;
@@ -33,6 +34,16 @@ public class TownHallBeastofburdenModuleView extends WorkerBuildingModuleView
     public String getIcon()
     {
         return "entity";
+    }
+
+    /**
+     * Present on MineColonies 1.1.1214+ {@code IBuildingModuleView}. Declared without
+     * {@code @Override} so 1.1.873 still compiles; at runtime on 1214+ this replaces the
+     * parent {@code custom.png} icon.
+     */
+    public ResourceLocation getIconResourceLocation()
+    {
+        return ResourceLocation.fromNamespaceAndPath("minecolonies", "textures/gui/modules/entity.png");
     }
 
     @Override

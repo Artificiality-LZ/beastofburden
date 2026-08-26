@@ -1,6 +1,8 @@
 package org.Artificial.beastofburden.util;
 
 import com.minecolonies.api.colony.IColony;
+import com.minecolonies.api.colony.buildings.IBuilding;
+import com.minecolonies.api.colony.buildings.workerbuildings.ITownHall;
 import com.minecolonies.api.colony.managers.interfaces.IRegisteredStructureManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -8,13 +10,14 @@ import org.jetbrains.annotations.Nullable;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.lang.reflect.Method;
 
 /**
  * Runtime bridges for MineColonies API renames across 1.1.873 and newer builds.
  * <p>
  * Compile target remains 1.1.873; callers must not bytecode-link renamed methods
- * (e.g. {@code IColony.getBuildingManager()}) or the JVM throws {@link NoSuchMethodError}
- * on 1.1.1214+.
+ * (e.g. {@code IColony.getBuildingManager()} or {@code IRegisteredStructureManager.getTownHall()}
+ * with an {@code ITownHall} return) or the JVM throws {@link NoSuchMethodError} on 1.1.1214+.
  */
 public final class MineColoniesCompat
 {
@@ -22,6 +25,9 @@ public final class MineColoniesCompat
 
     @Nullable
     private static final MethodHandle STRUCTURE_MANAGER_GETTER = resolveStructureManagerGetter();
+
+    @Nullable
+    private static final MethodHandle TOWN_HALL_GETTER = resolveTownHallGetter();
 
     private MineColoniesCompat()
     {
@@ -52,6 +58,33 @@ public final class MineColoniesCompat
         }
     }
 
+    /**
+     * Resolves the town hall from a structure manager.
+     * <p>
+     * On 873 the interface method returns {@link ITownHall}; on 1214+ it lives on a parent
+     * interface as {@code T getTownHall()} and erases to {@code Object}. Direct invoke of the
+     * 873 descriptor crashes with {@link NoSuchMethodError}.
+     */
+    @Nullable
+    public static IBuilding getTownHall(@Nullable final IRegisteredStructureManager manager)
+    {
+        if (manager == null || TOWN_HALL_GETTER == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            final Object townHall = TOWN_HALL_GETTER.invoke(manager);
+            return townHall instanceof IBuilding building ? building : null;
+        }
+        catch (final Throwable ex)
+        {
+            BeastofBurdenLog.warn("Failed to resolve town hall from structure manager: {}", ex.toString());
+            return null;
+        }
+    }
+
     @Nullable
     private static MethodHandle resolveStructureManagerGetter()
     {
@@ -70,6 +103,60 @@ public final class MineColoniesCompat
             );
         }
         return legacy;
+    }
+
+    @Nullable
+    private static MethodHandle resolveTownHallGetter()
+    {
+        final MethodHandle asTownHall = findVirtual(
+          IRegisteredStructureManager.class,
+          "getTownHall",
+          MethodType.methodType(ITownHall.class)
+        );
+        if (asTownHall != null)
+        {
+            return asTownHall;
+        }
+
+        final MethodHandle asObject = findVirtual(
+          IRegisteredStructureManager.class,
+          "getTownHall",
+          MethodType.methodType(Object.class)
+        );
+        if (asObject != null)
+        {
+            return asObject;
+        }
+
+        // 1214+: method may only be declared on ICommonRegisteredStructureManager with Object erasure.
+        final MethodHandle fromHierarchy = findTownHallOnHierarchy(IRegisteredStructureManager.class);
+        if (fromHierarchy == null)
+        {
+            BeastofBurdenLog.warn("IRegisteredStructureManager.getTownHall is not resolvable; town-hall lookup disabled.");
+        }
+        return fromHierarchy;
+    }
+
+    @Nullable
+    private static MethodHandle findTownHallOnHierarchy(@NotNull final Class<?> type)
+    {
+        for (final Method method : type.getMethods())
+        {
+            if (!"getTownHall".equals(method.getName()) || method.getParameterCount() != 0)
+            {
+                continue;
+            }
+
+            try
+            {
+                return LOOKUP.unreflect(method);
+            }
+            catch (final IllegalAccessException ignored)
+            {
+                // try next
+            }
+        }
+        return null;
     }
 
     @Nullable

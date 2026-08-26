@@ -1,8 +1,10 @@
 package org.Artificial.beastofburden.client.gui;
 
 import com.ldtteam.blockui.Pane;
+import com.ldtteam.blockui.PaneBuilders;
 import com.ldtteam.blockui.controls.Button;
 import com.ldtteam.blockui.controls.ButtonHandler;
+import com.ldtteam.blockui.controls.ButtonImage;
 import com.ldtteam.blockui.controls.Gradient;
 import com.ldtteam.blockui.controls.ItemIcon;
 import com.ldtteam.blockui.controls.Text;
@@ -10,6 +12,7 @@ import com.ldtteam.blockui.views.BOWindow;
 import com.ldtteam.blockui.views.ScrollingList;
 import com.minecolonies.api.colony.ICitizenDataView;
 import com.minecolonies.api.colony.buildings.modules.IAssignmentModuleView;
+import com.minecolonies.api.colony.buildings.modules.IBuildingModuleView;
 import com.minecolonies.api.colony.buildings.views.IBuildingView;
 import com.minecolonies.api.util.Tuple;
 import com.minecolonies.core.Network;
@@ -17,9 +20,11 @@ import com.minecolonies.core.client.gui.WindowHireWorker;
 import com.minecolonies.core.network.messages.server.colony.building.MarkBuildingDirtyMessage;
 import com.minecolonies.core.network.messages.server.colony.building.worker.RecallCitizenMessage;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.item.ItemStack;
 import org.Artificial.beastofburden.Beastofburden;
 import org.Artificial.beastofburden.colony.buildings.modules.TownHallBeastofburdenModuleView;
@@ -36,12 +41,15 @@ import org.Artificial.beastofburden.network.CyclePlanningModeMessage;
 import org.Artificial.beastofburden.network.ModNetwork;
 import org.Artificial.beastofburden.network.ToggleAutonomousPlanningMessage;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import java.util.function.Consumer;
 
 /**
@@ -76,10 +84,13 @@ public class BeastofburdenModuleWindow extends BOWindow implements ButtonHandler
     private static final String LABEL_PLANNING_STATUS = "planningStatus";
     private static final String LABEL_PLANNING_DETAIL = "planningDetail";
 
+    private static final String MAIN_TAB_NAME_KEY = "com.minecolonies.coremod.gui.maintab";
+
     private final TownHallBeastofburdenModuleView moduleView;
     private final IBuildingView buildingView;
     private final Map<String, Consumer<Button>> buttons = new HashMap<>();
     private int refreshCooldown = 20;
+    private boolean moduleSidebarBuilt;
 
     public BeastofburdenModuleWindow(@NotNull final TownHallBeastofburdenModuleView moduleView)
     {
@@ -91,6 +102,7 @@ public class BeastofburdenModuleWindow extends BOWindow implements ButtonHandler
         registerButton(BUTTON_TOGGLE_PLANNING, this::togglePlanningClicked);
         registerButton(BUTTON_CYCLE_PLANNING_MODE, this::cyclePlanningModeClicked);
         registerButton(BUTTON_EDIT_PLAN, this::editPlanClicked);
+        buildModuleSidebar();
     }
 
     private void registerButton(@NotNull final String id, @NotNull final Consumer<Button> action)
@@ -119,6 +131,155 @@ public class BeastofburdenModuleWindow extends BOWindow implements ButtonHandler
     private void recallClicked(@NotNull final Button button)
     {
         Network.getNetwork().sendToServer(new RecallCitizenMessage(buildingView));
+    }
+
+    /**
+     * Recreates the MineColonies module side tabs that {@code AbstractModuleWindow} used to provide.
+     */
+    private void buildModuleSidebar()
+    {
+        if (moduleSidebarBuilt)
+        {
+            return;
+        }
+        moduleSidebarBuilt = true;
+
+        boolean anyVisible = false;
+        for (final IBuildingModuleView view : buildingView.getAllModuleViews())
+        {
+            if (view.isPageVisible())
+            {
+                anyVisible = true;
+                break;
+            }
+        }
+        if (!anyVisible)
+        {
+            return;
+        }
+
+        final Random random = new Random(buildingView.getID().hashCode());
+        int offset = 0;
+
+        offset = addSidebarTab(
+          offset,
+          random,
+          "main",
+          ResourceLocation.fromNamespaceAndPath("minecolonies", "textures/gui/modules/main.png"),
+          Component.translatable(MAIN_TAB_NAME_KEY),
+          () -> buildingView.getWindow().open()
+        );
+
+        for (final IBuildingModuleView view : buildingView.getAllModuleViews())
+        {
+            if (!view.isPageVisible())
+            {
+                continue;
+            }
+
+            offset = addSidebarTab(
+              offset,
+              random,
+              safeIconId(view),
+              resolveModuleIcon(view),
+              resolveModuleDesc(view),
+              () -> {
+                  Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.BOOK_PAGE_TURN, 1.0F));
+                  view.getWindow().open();
+              }
+            );
+        }
+    }
+
+    private int addSidebarTab(
+      final int offset,
+      @NotNull final Random random,
+      @NotNull final String iconId,
+      @NotNull final ResourceLocation iconTexture,
+      @Nullable final Component tooltip,
+      @NotNull final Runnable openAction)
+    {
+        final ButtonImage image = new ButtonImage();
+        image.setImage(
+          ResourceLocation.fromNamespaceAndPath("minecolonies", "textures/gui/modules/tab_side" + (random.nextInt(3) + 1) + ".png"),
+          false
+        );
+        image.setPosition(-20, 10 + offset);
+        image.setSize(32, 26);
+        image.setHandler(button -> openAction.run());
+
+        final ButtonImage iconImage = new ButtonImage();
+        iconImage.setImage(iconTexture, false);
+        iconImage.setID(iconId);
+        iconImage.setPosition(-15, 13 + offset);
+        iconImage.setSize(20, 20);
+        iconImage.setHandler(button -> openAction.run());
+
+        addChild(image);
+        addChild(iconImage);
+        if (tooltip != null)
+        {
+            PaneBuilders.tooltipBuilder().hoverPane(iconImage).build().setText(tooltip);
+        }
+        return offset + image.getHeight() + 2;
+    }
+
+    @NotNull
+    private static String safeIconId(@NotNull final IBuildingModuleView view)
+    {
+        try
+        {
+            final String icon = view.getIcon();
+            return icon == null || icon.isEmpty() ? "custom" : icon;
+        }
+        catch (final RuntimeException ignored)
+        {
+            return "custom";
+        }
+    }
+
+    @NotNull
+    private static ResourceLocation resolveModuleIcon(@NotNull final IBuildingModuleView view)
+    {
+        try
+        {
+            final Method method = view.getClass().getMethod("getIconResourceLocation");
+            final Object result = method.invoke(view);
+            if (result instanceof ResourceLocation location)
+            {
+                return location;
+            }
+        }
+        catch (final ReflectiveOperationException ignored)
+        {
+            // 873 path: fall through to getIcon()
+        }
+
+        final String icon = safeIconId(view);
+        return ResourceLocation.fromNamespaceAndPath("minecolonies", "textures/gui/modules/" + icon + ".png");
+    }
+
+    @Nullable
+    private static Component resolveModuleDesc(@NotNull final IBuildingModuleView view)
+    {
+        try
+        {
+            final Method method = view.getClass().getMethod("getDesc");
+            final Object result = method.invoke(view);
+            if (result instanceof Component component)
+            {
+                return component;
+            }
+            if (result instanceof String key && !key.isEmpty())
+            {
+                return Component.translatable(key);
+            }
+        }
+        catch (final ReflectiveOperationException ignored)
+        {
+            // no title
+        }
+        return null;
     }
 
     @Override

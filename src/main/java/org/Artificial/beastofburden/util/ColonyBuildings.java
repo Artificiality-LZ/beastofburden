@@ -65,13 +65,7 @@ public final class ColonyBuildings
     @Nullable
     public static IBuilding getTownHall(@NotNull final IColony colony)
     {
-        final IRegisteredStructureManager manager = getStructureManager(colony);
-        if (manager == null)
-        {
-            return null;
-        }
-
-        return manager.getTownHall();
+        return MineColoniesCompat.getTownHall(getStructureManager(colony));
     }
 
     public static boolean hasActiveDeliveryman(@NotNull final IColony colony)

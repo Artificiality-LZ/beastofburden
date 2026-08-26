@@ -62,7 +62,20 @@ public final class ColonyRequestEventHandler
                 continue;
             }
 
-            scanColony(colony, tickCounter);
+            try
+            {
+                scanColony(colony, tickCounter);
+            }
+            catch (final Throwable ex)
+            {
+                LOGGER.error(
+                  "[{}] Failed scanning colony {} for stuck requests; continuing. {}",
+                  Beastofburden.MODID,
+                  colony.getID(),
+                  ex.toString(),
+                  ex
+                );
+            }
         }
     }
 
