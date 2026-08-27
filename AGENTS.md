@@ -10,7 +10,7 @@ BeastOfBurden is a **Minecraft Forge 1.20.1 mod** that acts as an **add-on for M
 - **Maven group:** `org.Artificial`
 - **Base package:** `org.Artificial.beastofburden` (note the capital `A` in `Artificial`)
 - **Display name:** `BeastOfBurden`
-- **Version:** `1.0-SNAPSHOT`
+- **Version:** `1.1`
 - **License:** `GPL-3.0-only` (as declared in `gradle.properties`)
 
 The mod is developed from the Forge MDK. The codebase is in active development, especially in the `colony.planning` package.
@@ -125,7 +125,7 @@ All Gradle commands are run from the repository root.
 
 - Reobfuscated artifact: `build/libs/beastofburden-<version>.jar`
 - `build.gradle` configures `jar { finalizedBy 'reobfJar' }`, so a normal `build` produces the production jar.
-- The current workspace already contains `build/libs/beastofburden-1.0-SNAPSHOT.jar`.
+- The current workspace already contains `build/libs/beastofburden-1.1.jar`.
 
 ## Runtime Architecture
 
@@ -229,7 +229,7 @@ The codebase follows the style visible in the existing files. When editing, pref
 ## Deployment / Distribution
 
 - There is **no CI pipeline** and **no Gradle publishing block** in the current build file.
-- To distribute: run `./gradlew build`, then ship `build/libs/beastofburden-1.0-SNAPSHOT.jar` (or the versioned jar).
+- To distribute: run `./gradlew build`, then ship `build/libs/beastofburden-1.1.jar` (or the versioned jar).
 - End users must install the required MineColonies dependency chain in their modpack.
 - The mod declares dependency version ranges in `mods.toml`:
   - Forge: `[47,)`

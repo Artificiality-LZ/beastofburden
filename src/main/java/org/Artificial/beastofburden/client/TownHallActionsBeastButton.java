@@ -93,6 +93,7 @@ public final class TownHallActionsBeastButton
         button.setImage(BUTTON_TEXTURE, false);
         button.setSize(BUTTON_WIDTH, BUTTON_HEIGHT);
         button.setPosition(BUTTON_X, BUTTON_Y);
+        button.setTextRenderBox(BUTTON_WIDTH, BUTTON_HEIGHT);
         button.setColors(TEXT_COLOR_BLACK);
         button.setText(Component.translatable(LABEL_KEY));
         button.setHandler(clicked -> openBeastWindow(resolved));

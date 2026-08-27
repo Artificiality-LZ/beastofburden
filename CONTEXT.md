@@ -4,14 +4,16 @@
 
 ## 环境
 
-| 项 | 值 |
-|----|----|
-| OS / Shell | Windows 10，PowerShell |
-| JDK | Java 17（PATH 中有 `java`；`JAVA_HOME` 可为空） |
-| Minecraft / Forge | 1.20.1 / 47.4.20 |
-| MineColonies | 1.1.873（及以上） |
-| Gradle | 8.8 wrapper |
-| 工作区 | `D:\Minecraft Mod\BeastOfBurden` |
+
+| 项                 | 值                                       |
+| ----------------- | --------------------------------------- |
+| OS / Shell        | Windows 10，PowerShell                   |
+| JDK               | Java 17（PATH 中有 `java`；`JAVA_HOME` 可为空） |
+| Minecraft / Forge | 1.20.1 / 47.4.20                        |
+| MineColonies      | 1.1.873（及以上）                            |
+| Gradle            | 8.8 wrapper                             |
+| 工作区               | `D:\Minecraft Mod\BeastOfBurden`        |
+
 
 本地路径（本机已就绪，不要重装、不要改这些目录里的内容）：
 
@@ -52,13 +54,15 @@
     1.0验收.md              手工验收清单
 ```
 
+
+
 ## 怎么调试
 
 在仓库根目录执行：
 
 ```powershell
 .\gradlew.bat compileJava    # 快速编译
-.\gradlew.bat build          # 完整构建，产物 build/libs/beastofburden-1.0-SNAPSHOT.jar
+.\gradlew.bat build          # 完整构建，产物 build/libs/beastofburden-1.1.jar
 .\gradlew.bat runClient      # 开发客户端，工作目录 run/
 .\gradlew.bat runServer      # 开发服务端
 ```
@@ -68,12 +72,15 @@
 - 不要无故 `clean` 或 `--refresh-dependencies`（会丢掉本机缓存、极慢）
 - 不要修改本地 MineColonies 源码树（`minecolonies-1.20.1-1.1.873/`、`minecolonies-1.20.1-1.1.1214/`；旧 `minecolonies-release-1.20/` 可删）
 
+
+
 ## Git
 
-任务完成且编译通过后 **直接 commit，不必再问**。不要 push，除非用户明确要求。
+任务完成且编译通过后 **直接 commit，不必再问**。不要 push，除非用户明确要求。提交日志使用中文。
 
 ## 硬性约束
 
 - 包名保持 `org.Artificial.beastofburden`（`Artificial` 的 A 大写）
 - 新增翻译键同步写入 `en_us.json` 与 `zh_cn.json`
 - 新增网络消息时在 `ModNetwork.register()` 注册
+
