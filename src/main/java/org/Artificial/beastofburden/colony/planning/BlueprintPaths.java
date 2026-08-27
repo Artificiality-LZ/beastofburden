@@ -5,6 +5,7 @@ import com.ldtteam.structurize.storage.StructurePacks;
 import com.minecolonies.api.blocks.AbstractBlockHut;
 import com.minecolonies.api.compatibility.newstruct.BlueprintMapping;
 import com.minecolonies.api.util.constant.Constants;
+import org.Artificial.beastofburden.util.MineColoniesCompat;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -54,6 +55,6 @@ public final class BlueprintPaths
 
     public static boolean isHutType(@NotNull final PlannedBuildingType type)
     {
-        return type.getEntry().getBuildingBlock() instanceof AbstractBlockHut<?>;
+        return MineColoniesCompat.getBuildingBlock(type.getEntry()) instanceof AbstractBlockHut<?>;
     }
 }

@@ -2,13 +2,17 @@ package org.Artificial.beastofburden.util;
 
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.buildings.IBuilding;
+import com.minecolonies.api.colony.buildings.registry.BuildingEntry;
 import com.minecolonies.api.colony.buildings.workerbuildings.ITownHall;
 import com.minecolonies.api.colony.managers.interfaces.IRegisteredStructureManager;
 import com.minecolonies.api.entity.ai.statemachine.AITarget;
 import com.minecolonies.api.entity.ai.statemachine.states.IState;
+import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.invoke.CallSite;
+import java.lang.invoke.LambdaMetafactory;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -24,11 +28,12 @@ import java.util.function.Supplier;
  * (e.g. {@code IColony.getBuildingManager()} or {@code IRegisteredStructureManager.getTownHall()}
  * with an {@code ITownHall} return) or the JVM throws {@link NoSuchMethodError} on 1.1.1214+.
  * The same applies to {@link AITarget} constructors that swapped JDK functional types for
- * MineColonies SAM interfaces on 1.1.1197+.
+ * MineColonies SAM interfaces on 1.1.1197+, and to {@link BuildingEntry#getBuildingBlock()} whose
+ * return type changed from {@code AbstractBlockHut} to {@code AbstractColonyBlock}.
  */
 public final class MineColoniesCompat
 {
-    private static final MethodHandles.Lookup LOOKUP = MethodHandles.publicLookup();
+    private static final MethodHandles.Lookup LOOKUP = MethodHandles.lookup();
 
     private static final String I_BOOLEAN_CONDITION_SUPPLIER =
       "com.minecolonies.api.entity.ai.statemachine.tickratestatemachine.IBooleanConditionSupplier";
@@ -42,12 +47,21 @@ public final class MineColoniesCompat
     private static final MethodHandle TOWN_HALL_GETTER = resolveTownHallGetter();
 
     @Nullable
+    private static final MethodHandle BUILDING_BLOCK_GETTER = resolveBuildingBlockGetter();
+
+    @Nullable
     private static final MethodHandle AI_TARGET_FOUR_ARG = resolveAiTargetFourArg();
 
     @Nullable
     private static final MethodHandle AI_TARGET_THREE_ARG = resolveAiTargetThreeArg();
 
     private static final boolean AI_TARGET_USES_CUSTOM_SAM = resolveAiTargetUsesCustomSam();
+
+    @Nullable
+    private static final MethodHandle BOOLEAN_SAM_FACTORY = resolveBooleanSamFactory();
+
+    @Nullable
+    private static final MethodHandle STATE_SAM_FACTORY = resolveStateSamFactory();
 
     private MineColoniesCompat()
     {
@@ -101,6 +115,32 @@ public final class MineColoniesCompat
         catch (final Throwable ex)
         {
             BeastofBurdenLog.warn("Failed to resolve town hall from structure manager: {}", ex.toString());
+            return null;
+        }
+    }
+
+    /**
+     * Resolves the hut/colony block for a building entry.
+     * <p>
+     * On 873 the method returns {@code AbstractBlockHut}; on 1214+ it returns
+     * {@code AbstractColonyBlock}. Bytecode linking either descriptor crashes on the other build.
+     */
+    @Nullable
+    public static Block getBuildingBlock(@NotNull final BuildingEntry entry)
+    {
+        if (BUILDING_BLOCK_GETTER == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            final Object block = BUILDING_BLOCK_GETTER.invoke(entry);
+            return block instanceof Block resolved ? resolved : null;
+        }
+        catch (final Throwable ex)
+        {
+            BeastofBurdenLog.warn("Failed to resolve building block for {}: {}", entry.getRegistryName(), ex.toString());
             return null;
         }
     }
@@ -210,7 +250,7 @@ public final class MineColoniesCompat
         }
 
         // 1214+: method may only be declared on ICommonRegisteredStructureManager with Object erasure.
-        final MethodHandle fromHierarchy = findTownHallOnHierarchy(IRegisteredStructureManager.class);
+        final MethodHandle fromHierarchy = findZeroArgMethod(IRegisteredStructureManager.class, "getTownHall");
         if (fromHierarchy == null)
         {
             BeastofBurdenLog.warn("IRegisteredStructureManager.getTownHall is not resolvable; town-hall lookup disabled.");
@@ -219,11 +259,22 @@ public final class MineColoniesCompat
     }
 
     @Nullable
-    private static MethodHandle findTownHallOnHierarchy(@NotNull final Class<?> type)
+    private static MethodHandle resolveBuildingBlockGetter()
+    {
+        final MethodHandle handle = findZeroArgMethod(BuildingEntry.class, "getBuildingBlock");
+        if (handle == null)
+        {
+            BeastofBurdenLog.warn("BuildingEntry.getBuildingBlock is not resolvable; hut block lookup disabled.");
+        }
+        return handle;
+    }
+
+    @Nullable
+    private static MethodHandle findZeroArgMethod(@NotNull final Class<?> type, @NotNull final String name)
     {
         for (final Method method : type.getMethods())
         {
-            if (!"getTownHall".equals(method.getName()) || method.getParameterCount() != 0)
+            if (!name.equals(method.getName()) || method.getParameterCount() != 0)
             {
                 continue;
             }
@@ -248,7 +299,7 @@ public final class MineColoniesCompat
     {
         try
         {
-            return LOOKUP.findVirtual(owner, name, type);
+            return MethodHandles.publicLookup().findVirtual(owner, name, type);
         }
         catch (final NoSuchMethodException | IllegalAccessException ignored)
         {
@@ -324,6 +375,82 @@ public final class MineColoniesCompat
         return !BooleanSupplier.class.equals(AI_TARGET_FOUR_ARG.type().parameterType(1));
     }
 
+    @Nullable
+    private static MethodHandle resolveBooleanSamFactory()
+    {
+        if (!AI_TARGET_USES_CUSTOM_SAM)
+        {
+            return null;
+        }
+
+        final Class<?> samType = loadClass(I_BOOLEAN_CONDITION_SUPPLIER);
+        if (samType == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            final MethodHandle target = LOOKUP.findVirtual(
+              BooleanSupplier.class,
+              "getAsBoolean",
+              MethodType.methodType(boolean.class)
+            );
+            final CallSite site = LambdaMetafactory.metafactory(
+              LOOKUP,
+              "getAsBoolean",
+              MethodType.methodType(samType, BooleanSupplier.class),
+              MethodType.methodType(boolean.class),
+              target,
+              MethodType.methodType(boolean.class)
+            );
+            return site.getTarget();
+        }
+        catch (final Throwable ex)
+        {
+            BeastofBurdenLog.warn("LambdaMetafactory for IBooleanConditionSupplier failed; falling back to Proxy: {}", ex.toString());
+            return null;
+        }
+    }
+
+    @Nullable
+    private static MethodHandle resolveStateSamFactory()
+    {
+        if (!AI_TARGET_USES_CUSTOM_SAM)
+        {
+            return null;
+        }
+
+        final Class<?> samType = loadClass(I_STATE_SUPPLIER);
+        if (samType == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            final MethodHandle target = LOOKUP.findVirtual(
+              Supplier.class,
+              "get",
+              MethodType.methodType(Object.class)
+            );
+            final CallSite site = LambdaMetafactory.metafactory(
+              LOOKUP,
+              "get",
+              MethodType.methodType(samType, Supplier.class),
+              MethodType.methodType(Object.class),
+              target,
+              MethodType.methodType(Object.class)
+            );
+            return site.getTarget();
+        }
+        catch (final Throwable ex)
+        {
+            BeastofBurdenLog.warn("LambdaMetafactory for IStateSupplier failed; falling back to Proxy: {}", ex.toString());
+            return null;
+        }
+    }
+
     @NotNull
     private static Object adaptBooleanSupplier(@NotNull final BooleanSupplier predicate)
     {
@@ -332,6 +459,47 @@ public final class MineColoniesCompat
             return predicate;
         }
 
+        if (BOOLEAN_SAM_FACTORY != null)
+        {
+            try
+            {
+                return BOOLEAN_SAM_FACTORY.invoke(predicate);
+            }
+            catch (final Throwable ex)
+            {
+                BeastofBurdenLog.warn("Failed to adapt BooleanSupplier via LambdaMetafactory: {}", ex.toString());
+            }
+        }
+
+        return proxyBooleanSupplier(predicate);
+    }
+
+    @NotNull
+    private static Object adaptStateSupplier(@NotNull final Supplier<?> action)
+    {
+        if (!AI_TARGET_USES_CUSTOM_SAM)
+        {
+            return action;
+        }
+
+        if (STATE_SAM_FACTORY != null)
+        {
+            try
+            {
+                return STATE_SAM_FACTORY.invoke(action);
+            }
+            catch (final Throwable ex)
+            {
+                BeastofBurdenLog.warn("Failed to adapt Supplier via LambdaMetafactory: {}", ex.toString());
+            }
+        }
+
+        return proxyStateSupplier(action);
+    }
+
+    @NotNull
+    private static Object proxyBooleanSupplier(@NotNull final BooleanSupplier predicate)
+    {
         final Class<?> samType = loadClass(I_BOOLEAN_CONDITION_SUPPLIER);
         if (samType == null)
         {
@@ -353,13 +521,8 @@ public final class MineColoniesCompat
     }
 
     @NotNull
-    private static Object adaptStateSupplier(@NotNull final Supplier<?> action)
+    private static Object proxyStateSupplier(@NotNull final Supplier<?> action)
     {
-        if (!AI_TARGET_USES_CUSTOM_SAM)
-        {
-            return action;
-        }
-
         final Class<?> samType = loadClass(I_STATE_SUPPLIER);
         if (samType == null)
         {
@@ -400,7 +563,7 @@ public final class MineColoniesCompat
     {
         try
         {
-            return LOOKUP.findConstructor(owner, type);
+            return MethodHandles.publicLookup().findConstructor(owner, type);
         }
         catch (final NoSuchMethodException | IllegalAccessException ignored)
         {

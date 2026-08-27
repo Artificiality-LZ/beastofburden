@@ -3,6 +3,7 @@ package org.Artificial.beastofburden.colony.planning;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
+import org.Artificial.beastofburden.util.MineColoniesCompat;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -19,7 +20,11 @@ public final class PlannedBuildingIcons
     @NotNull
     public static ItemStack stackFor(@NotNull final PlannedBuildingType type)
     {
-        final Block block = type.getEntry().getBuildingBlock();
+        final Block block = MineColoniesCompat.getBuildingBlock(type.getEntry());
+        if (block == null)
+        {
+            return ItemStack.EMPTY;
+        }
         return new ItemStack(block);
     }
 

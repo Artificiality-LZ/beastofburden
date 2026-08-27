@@ -1,6 +1,5 @@
 package org.Artificial.beastofburden.colony.planning;
 
-import com.minecolonies.api.blocks.AbstractBlockHut;
 import com.minecolonies.api.colony.buildings.ModBuildings;
 import com.minecolonies.api.colony.buildings.registry.BuildingEntry;
 import net.minecraftforge.registries.RegistryObject;
@@ -93,12 +92,8 @@ public enum PlannedBuildingType
     @NotNull
     public String getBlueprintName()
     {
-        final var block = getEntry().getBuildingBlock();
-        if (block instanceof AbstractBlockHut<?>)
-        {
-            return ((AbstractBlockHut<?>) block).getBlueprintName();
-        }
-        return schematicId;
+        // Matches AbstractBlockHut.getBlueprintName() on 873 and 1214+ (registry path).
+        return getEntry().getRegistryName().getPath();
     }
 
     @Nullable

@@ -12,6 +12,7 @@ import org.Artificial.beastofburden.colony.work.BeastWorkLogEntry;
 import org.Artificial.beastofburden.colony.work.BeastWorkStatus;
 import org.Artificial.beastofburden.event.ColonyRequestEventHandler;
 import org.Artificial.beastofburden.util.ColonyBuildings;
+import org.Artificial.beastofburden.util.MineColoniesCompat;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -141,7 +142,10 @@ public final class ColonyPlannerDriver
             return;
         }
 
-        final ResourceLocation hutItem = BuiltInRegistries.ITEM.getKey(result.task().getType().getEntry().getBuildingBlock().asItem());
+        final var hutBlock = MineColoniesCompat.getBuildingBlock(result.task().getType().getEntry());
+        final ResourceLocation hutItem = hutBlock == null
+          ? BuiltInRegistries.ITEM.getDefaultKey()
+          : BuiltInRegistries.ITEM.getKey(hutBlock.asItem());
         final String detail = formatDetail(result);
         module.setActiveWork(BeastWorkStatus.planning(plannerCitizen.getId(), plannerCitizen.getName(), hutItem, detail));
         module.appendLog(new BeastWorkLogEntry(

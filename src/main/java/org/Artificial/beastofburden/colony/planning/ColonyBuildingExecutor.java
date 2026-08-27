@@ -19,6 +19,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.Artificial.beastofburden.util.BeastofBurdenLog;
 import org.Artificial.beastofburden.util.ColonyBuildings;
 import org.Artificial.beastofburden.util.ConstructionTapeSupport;
+import org.Artificial.beastofburden.util.MineColoniesCompat;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -144,7 +145,7 @@ public final class ColonyBuildingExecutor
             return ExecutionResult.failed("overlap");
         }
 
-        final Block hutBlock = task.getType().getEntry().getBuildingBlock();
+        final Block hutBlock = MineColoniesCompat.getBuildingBlock(task.getType().getEntry());
         if (!(hutBlock instanceof AbstractBlockHut<?> abstractHut))
         {
             return ExecutionResult.failed("invalid_hut");

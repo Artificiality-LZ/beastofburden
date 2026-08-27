@@ -25,6 +25,11 @@ public final class BeastofBurdenAiDriver
             return;
         }
 
+        if (citizen.getEntity().isEmpty())
+        {
+            return;
+        }
+
         ensureWorkAi(job);
 
         final EntityAIBeastofburden workAi = job.getWorkerAI();
@@ -49,7 +54,7 @@ public final class BeastofBurdenAiDriver
             return;
         }
 
-        if (!job.getCitizen().getEntity().isPresent())
+        if (job.getCitizen().getEntity().isEmpty())
         {
             return;
         }
