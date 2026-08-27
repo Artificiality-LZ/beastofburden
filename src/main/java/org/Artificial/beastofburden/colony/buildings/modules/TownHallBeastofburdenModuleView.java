@@ -17,7 +17,7 @@ import org.jetbrains.annotations.NotNull;
  * Client view for {@link TownHallBeastofburdenModule}.
  * <p>
  * Not shown on the MineColonies module sidebar ({@link #isPageVisible()} is false). Opened from
- * the Town Hall Actions page via {@link org.Artificial.beastofburden.mixin.WindowMainPageMixin}.
+ * the Town Hall Actions page via {@link org.Artificial.beastofburden.client.TownHallActionsBeastButton}.
  */
 public class TownHallBeastofburdenModuleView extends WorkerBuildingModuleView
 {
