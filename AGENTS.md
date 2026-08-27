@@ -67,7 +67,7 @@ Declared in `build.gradle` / `gradle.properties`:
 ### Source Packages
 
 - `org.Artificial.beastofburden` — mod entry class `Beastofburden`, `Config`
-- `client` — config screen (`BeastofburdenConfigScreen`) and client setup
+- `client` — config screen (`BeastofburdenConfigScreen`), client setup, Town Hall Actions button (`TownHallActionsBeastButton`)
 - `client.gui` — BlockUI-based Town Hall tab (`BeastofburdenModuleWindow`)
 - `colony.buildings` — module producer registration for MineColonies buildings
 - `colony.buildings.modules` — `TownHallBeastofburdenModule` and its client view
@@ -77,7 +77,7 @@ Declared in `build.gradle` / `gradle.properties`:
 - `config` — config persistence / snapshot helpers
 - `entity.ai` — AI skeleton, states, tasks
 - `event` — server tick driver, request handler, item-value bootstrap
-- `mixin` — Mixin package (Gradle plugin remains wired; no mixins are currently registered)
+- `mixin` — optional `WindowMainPageMixin` (same helper as `TownHallActionsBeastButton`; userdev often does not apply it)
 - `network` — `SimpleChannel` messages
 - `util` — request queue, logistics, item value registry, planning helpers
 
@@ -180,14 +180,14 @@ All Gradle commands are run from the repository root.
 
 ### GUI
 
-- `BeastofburdenModuleWindow` extends BlockUI `BOWindow` and uses `assets/beastofburden/gui/layouthuts/layoutbeastofburden.xml`. Opened from the Town Hall Actions page (`WindowMainPageMixin`), not the module sidebar.
+- `BeastofburdenModuleWindow` extends BlockUI `BOWindow` and uses `assets/beastofburden/gui/layouthuts/layoutbeastofburden.xml`. Opened from the Town Hall Actions page (`TownHallActionsBeastButton` on `ScreenEvent.Init.Post`), not the module sidebar.
 - Displays hired beasts, active work with progress bars, work history, and planning status.
 - `BeastofburdenConfigScreen` is registered as Forge’s config screen extension point (`ConfigScreenHandler.ConfigScreenFactory`).
 
 ### Mixins
 
 - Mixin Gradle (`mixingradle`) remains configured for a future refmap, but `beastofburden.mixins.json` is not registered (`mixin { config }` is omitted). Passing `--mixin.config` at launch makes Mixin read the file before this mod’s resources are on the classpath and crashes.
-- Client mixin `WindowMainPageMixin` injects a Beast button on Town Hall Actions. Declare mixins in `mods.toml` `[[mixins]]` instead of `--mixin.config`.
+- Town Hall Actions «Beast» button is injected by `TownHallActionsBeastButton` (`ScreenEvent.Init.Post`). Optional `WindowMainPageMixin` calls the same helper. Declare mixins in `mods.toml` `[[mixins]]` instead of `--mixin.config`.
 
 ## Code Style Guidelines
 
