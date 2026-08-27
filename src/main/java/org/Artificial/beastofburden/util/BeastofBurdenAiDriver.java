@@ -54,7 +54,18 @@ public final class BeastofBurdenAiDriver
             return;
         }
 
-        job.createAI();
-        BeastofBurdenLog.info("Created work AI for beast citizen {}.", job.getCitizen().getId());
+        try
+        {
+            job.createAI();
+            BeastofBurdenLog.info("Created work AI for beast citizen {}.", job.getCitizen().getId());
+        }
+        catch (final Throwable ex)
+        {
+            BeastofBurdenLog.warn(
+              "Failed to create work AI for beast citizen {}: {}",
+              job.getCitizen().getId(),
+              ex.toString()
+            );
+        }
     }
 }

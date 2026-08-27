@@ -20,6 +20,7 @@ import org.Artificial.beastofburden.util.BeastofBurdenLog;
 import org.Artificial.beastofburden.util.BeastofBurdenRequestQueue;
 import org.Artificial.beastofburden.util.BeastWorkSync;
 import org.Artificial.beastofburden.util.ColonyLogistics;
+import org.Artificial.beastofburden.util.MineColoniesCompat;
 import org.Artificial.beastofburden.util.RequestItemUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -52,10 +53,10 @@ public class EntityAIBeastofburden extends AbstractAISkeleton<JobBeastofburden>
 
         super.registerTargets(
           new AITarget(INIT, IDLE, 1),
-          new AITarget(IDLE, this::hasWorkAvailable, () -> BeastofBurdenState.GENERATE_ITEM, 1),
-          new AITarget(IDLE, this::idle, 20),
-          new AITarget(BeastofBurdenState.GENERATE_ITEM, this::tickGenerateItem, 1),
-          new AITarget(BeastofBurdenState.DELIVER_ITEM, this::tickDeliverItem, 1)
+          MineColoniesCompat.aiTarget(IDLE, this::hasWorkAvailable, () -> BeastofBurdenState.GENERATE_ITEM, 1),
+          MineColoniesCompat.aiTarget(IDLE, this::idle, 20),
+          MineColoniesCompat.aiTarget(BeastofBurdenState.GENERATE_ITEM, this::tickGenerateItem, 1),
+          MineColoniesCompat.aiTarget(BeastofBurdenState.DELIVER_ITEM, this::tickDeliverItem, 1)
         );
     }
 
