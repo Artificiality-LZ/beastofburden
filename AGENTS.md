@@ -180,14 +180,14 @@ All Gradle commands are run from the repository root.
 
 ### GUI
 
-- `BeastofburdenModuleWindow` extends MineColonies `SpecialAssignmentModuleWindow` and uses `assets/beastofburden/gui/layouthuts/layoutbeastofburden.xml`.
+- `BeastofburdenModuleWindow` extends BlockUI `BOWindow` and uses `assets/beastofburden/gui/layouthuts/layoutbeastofburden.xml`. Opened from the Town Hall Actions page (`WindowMainPageMixin`), not the module sidebar.
 - Displays hired beasts, active work with progress bars, work history, and planning status.
 - `BeastofburdenConfigScreen` is registered as Forge’s config screen extension point (`ConfigScreenHandler.ConfigScreenFactory`).
 
 ### Mixins
 
 - Mixin Gradle (`mixingradle`) remains configured for a future refmap, but `beastofburden.mixins.json` is not registered (`mixin { config }` is omitted). Passing `--mixin.config` at launch makes Mixin read the file before this mod’s resources are on the classpath and crashes.
-- MineColonies 1.1.873 still shows the Town Hall module sidebar natively, so the 1214-era `shouldRenderDefaultSidebar` injection is not used. When mixins are added, declare them in `mods.toml` `[[mixins]]` instead of `--mixin.config`.
+- Client mixin `WindowMainPageMixin` injects a Beast button on Town Hall Actions. Declare mixins in `mods.toml` `[[mixins]]` instead of `--mixin.config`.
 
 ## Code Style Guidelines
 

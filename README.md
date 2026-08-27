@@ -91,13 +91,13 @@ If you distribute modified versions of this mod, you must also release the corre
 - **固定式** — 按预设顺序建造（可通过「编辑建造计划」自定义）。这是 1.0 的完整路径。
 - **启发式** — 按殖民地现状打分选下一座（实验性；建筑目录不完整）。
 
-**市政厅模块** — 无需单独盖小屋。在市政厅「牛马」标签页雇佣、查看当前工作与进度条、浏览工作记录。可雇佣数量随市政厅等级提升（1–2 级 1 名，3–4 级 2 名，5 级 3 名）。
+**市政厅模块** — 无需单独盖小屋。在市政厅 Actions 主页点「牛马」雇佣、查看当前工作与进度条、浏览工作记录。可雇佣数量随市政厅等级提升（1–2 级 1 名，3–4 级 2 名，5 级 3 名）。
 
 ### 安装
 
 1. 安装 **Minecraft 1.20.1**、**Forge 47+** 及 **模拟殖民地（MineColonies）1.1.873 或更新** 及其依赖。
 2. 从 [Releases](https://github.com/Artificiality-LZ/beastofburden/releases) 下载 jar，或自行编译。
-3. 将 jar 放入 `mods` 文件夹，进游戏建造市政厅，在「牛马」标签页雇佣即可。
+3. 将 jar 放入 `mods` 文件夹，进游戏建造市政厅，在 Actions 主页点「牛马」雇佣即可。
 
 ### 从源码构建
 

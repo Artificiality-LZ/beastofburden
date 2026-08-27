@@ -1,6 +1,7 @@
 {
   "com.beastofburden.job.beastofburden": "Beast of Burden",
   "com.beastofburden.gui.townhall.beastofburden": "Beast of Burden",
+  "com.beastofburden.gui.townhall.back": "Back",
   "beastofburden:beastofburden.skills.desc": "General labourer stationed at the Town Hall. Higher Strength generates items faster.",
   "com.beastofburden.gui.townhall.workers": "Assigned Beasts",
   "com.beastofburden.gui.townhall.active_work": "Current Work",

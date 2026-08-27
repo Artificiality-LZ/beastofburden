@@ -1,6 +1,7 @@
 {
   "com.beastofburden.job.beastofburden": "牛马",
   "com.beastofburden.gui.townhall.beastofburden": "牛马",
+  "com.beastofburden.gui.townhall.back": "返回",
   "beastofburden:beastofburden.skills.desc": "通用劳力，在市政厅待命并处理殖民地杂务。力量越高，生成物品越快。",
   "com.beastofburden.gui.townhall.workers": "已分配牛马",
   "com.beastofburden.gui.townhall.active_work": "当前工作",

@@ -5,7 +5,6 @@ import com.minecolonies.api.colony.ICitizenDataView;
 import com.minecolonies.api.colony.jobs.registry.JobEntry;
 import com.minecolonies.core.colony.buildings.moduleviews.WorkerBuildingModuleView;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
 import org.Artificial.beastofburden.client.gui.BeastofburdenModuleWindow;
 import org.Artificial.beastofburden.colony.jobs.BeastofburdenJobs;
 import org.Artificial.beastofburden.colony.planning.ColonyPhase;
@@ -16,11 +15,12 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * Client view for {@link TownHallBeastofburdenModule}.
+ * <p>
+ * Not shown on the MineColonies module sidebar ({@link #isPageVisible()} is false). Opened from
+ * the Town Hall Actions page via {@link org.Artificial.beastofburden.mixin.WindowMainPageMixin}.
  */
 public class TownHallBeastofburdenModuleView extends WorkerBuildingModuleView
 {
-    private static final String GUI_DESC_KEY = "com.beastofburden.gui.townhall.beastofburden";
-
     private BeastWorkSnapshot workSnapshot = BeastWorkSnapshot.EMPTY;
     private boolean workUpdated = true;
     private boolean autonomousPlanningEnabled;
@@ -31,31 +31,9 @@ public class TownHallBeastofburdenModuleView extends WorkerBuildingModuleView
     private String planningLastDecision = "";
 
     @Override
-    public String getIcon()
-    {
-        return "entity";
-    }
-
-    /**
-     * Present on MineColonies 1.1.1214+ {@code IBuildingModuleView}. Declared without
-     * {@code @Override} so 1.1.873 still compiles; at runtime on 1214+ this replaces the
-     * parent {@code custom.png} icon.
-     */
-    public ResourceLocation getIconResourceLocation()
-    {
-        return ResourceLocation.fromNamespaceAndPath("minecolonies", "textures/gui/modules/entity.png");
-    }
-
-    @Override
-    public String getDesc()
-    {
-        return GUI_DESC_KEY;
-    }
-
-    @Override
     public boolean isPageVisible()
     {
-        return true;
+        return false;
     }
 
     @NotNull
