@@ -28,6 +28,7 @@ public final class SaveBeastConfigMessage
     {
         buf.writeVarInt(message.snapshot.baseGenerationTicks());
         buf.writeVarInt(message.snapshot.minGenerationTicks());
+        buf.writeVarInt(message.snapshot.deliveryTimeoutTicks());
         buf.writeDouble(message.snapshot.ticksPerItemValue());
         buf.writeDouble(message.snapshot.strengthSpeedBonus());
         buf.writeVarInt(message.snapshot.defaultItemValue());
@@ -46,6 +47,7 @@ public final class SaveBeastConfigMessage
     {
         final int base = buf.readVarInt();
         final int min = buf.readVarInt();
+        final int deliveryTimeout = buf.readVarInt();
         final double ticksPerValue = buf.readDouble();
         final double strengthBonus = buf.readDouble();
         final int defaultValue = buf.readVarInt();
@@ -67,7 +69,7 @@ public final class SaveBeastConfigMessage
                 buf.readVarInt();
             }
         }
-        return new SaveBeastConfigMessage(new ConfigSnapshot(base, min, ticksPerValue, strengthBonus, defaultValue, derive, logMax, logDays, itemValues));
+        return new SaveBeastConfigMessage(new ConfigSnapshot(base, min, deliveryTimeout, ticksPerValue, strengthBonus, defaultValue, derive, logMax, logDays, itemValues));
     }
 
     public static void handle(final SaveBeastConfigMessage message, final Supplier<NetworkEvent.Context> contextSupplier)

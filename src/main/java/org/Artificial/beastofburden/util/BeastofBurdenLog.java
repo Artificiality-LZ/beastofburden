@@ -27,4 +27,12 @@ public final class BeastofBurdenLog
     {
         LOGGER.warn("[beastofburden] " + message, arguments);
     }
+
+    public static void debug(final String message, final Object... arguments)
+    {
+        if (Config.debugLogging)
+        {
+            LOGGER.info("[beastofburden] " + message, arguments);
+        }
+    }
 }

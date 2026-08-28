@@ -22,6 +22,7 @@ public final class ConfigPersistence
         Config.applyRuntimeValues(
           snapshot.baseGenerationTicks(),
           snapshot.minGenerationTicks(),
+          snapshot.deliveryTimeoutTicks(),
           snapshot.ticksPerItemValue(),
           snapshot.strengthSpeedBonus(),
           snapshot.defaultItemValue(),

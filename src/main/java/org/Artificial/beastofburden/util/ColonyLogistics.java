@@ -4,14 +4,19 @@ import com.google.common.collect.ImmutableList;
 import com.minecolonies.api.colony.ICitizenData;
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.buildings.IBuilding;
+import com.minecolonies.api.colony.managers.interfaces.IRegisteredStructureManager;
+import com.minecolonies.api.colony.requestsystem.manager.IRequestManager;
 import com.minecolonies.api.colony.requestsystem.request.IRequest;
 import com.minecolonies.api.colony.requestsystem.requestable.Tool;
 import com.minecolonies.api.colony.requestsystem.token.IToken;
 import com.minecolonies.api.util.InventoryUtils;
 import com.minecolonies.api.util.ItemStackUtils;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -76,7 +81,7 @@ public final class ColonyLogistics
 
     public static boolean isOpenOnAnyBuilding(@NotNull final IColony colony, @NotNull final IRequest<?> request)
     {
-        return findRequestTarget(colony, request.getId()).isPresent();
+        return findRequestTargetForDelivery(colony, request).isPresent();
     }
 
     /**
@@ -110,9 +115,51 @@ public final class ColonyLogistics
     }
 
     /**
+     * Resolve delivery target for a request, including child ingredient requests and resolver-owned requests.
+     */
+    @NotNull
+    public static Optional<RequestTarget> findRequestTargetForDelivery(@NotNull final IColony colony, @NotNull final IRequest<?> request)
+    {
+        final Optional<RequestTarget> direct = findRequestTarget(colony, request.getId());
+        if (direct.isPresent())
+        {
+            return direct;
+        }
+
+        try
+        {
+            final Optional<IBuilding> requesterBuilding = findBuildingFromRequester(colony, request);
+            if (requesterBuilding.isPresent())
+            {
+                final IBuilding building = requesterBuilding.get();
+                final Optional<ICitizenData> citizen = building.getCitizenForRequest(request.getId())
+                  .or(() -> findFallbackCitizen(building));
+                return Optional.of(new RequestTarget(building, citizen));
+            }
+
+            final Optional<RequestTarget> fromParent = findRequestTargetFromParentChain(colony, request);
+            if (fromParent.isPresent())
+            {
+                return fromParent;
+            }
+        }
+        catch (final Exception ex)
+        {
+            BeastofBurdenLog.warn(
+              "Failed to resolve delivery target for request {} in colony {}: {}",
+              request.getId(),
+              colony.getID(),
+              ex.toString()
+            );
+        }
+
+        return Optional.empty();
+    }
+
+    /**
      * Deliver generated items to the requester, then complete the request in the colony RS.
      *
-     * @return {@code true} when the item reached the requester and the request was overruled.
+     * @return {@code true} when the request was overruled successfully.
      */
     public static boolean fulfillRequest(
       @NotNull final IColony colony,
@@ -131,27 +178,21 @@ public final class ColonyLogistics
             return false;
         }
 
-        final Optional<RequestTarget> target = findRequestTarget(colony, request.getId());
+        final Optional<RequestTarget> target = findRequestTargetForDelivery(colony, request);
         if (target.isEmpty())
         {
-            BeastofBurdenLog.warn("No request target found for request {}", request.getId());
-            return false;
+            BeastofBurdenLog.debug("No delivery target for request {}; attempting direct overrule.", request.getId());
+            return overruleRequestDirect(colony, request, delivery);
         }
 
         final IBuilding building = target.get().building();
         final Optional<ICitizenData> requester = target.get().citizen();
+        final boolean citizenOpenRequest = requester.isPresent()
+          && isCitizenOpenRequest(building, requester.get().getId(), request.getId());
 
-        if (requester.isPresent() && isCitizenOpenRequest(building, requester.get().getId(), request.getId()))
+        if (requester.isPresent() && requester.get().getEntity().isPresent())
         {
-            if (!giveStackToCitizen(requester.get(), delivery))
-            {
-                BeastofBurdenLog.warn(
-                  "Failed to insert {} into citizen {} inventory.",
-                  delivery.getHoverName().getString(),
-                  requester.get().getId()
-                );
-                return false;
-            }
+            giveStackToCitizen(requester.get(), delivery);
 
             if (building.overruleNextOpenRequestOfCitizenWithStack(requester.get(), delivery))
             {
@@ -163,20 +204,22 @@ public final class ColonyLogistics
                 );
                 return true;
             }
-        }
-        else
-        {
-            if (!giveStackToBuilding(colony, building, delivery))
-            {
-                BeastofBurdenLog.warn(
-                  "Failed to insert {} into building {} inventory.",
-                  delivery.getHoverName().getString(),
-                  building.getID()
-                );
-                return false;
-            }
 
-            if (buildingHasOpenRequest(building, colony, BUILDING_REQUEST_CITIZEN_ID, request.getId()))
+            if (overruleRequestDirect(colony, request, delivery))
+            {
+                BeastofBurdenLog.info(
+                  "Fulfilled request {} via direct overrule to citizen {} with {}.",
+                  request.getId(),
+                  requester.get().getId(),
+                  delivery.getHoverName().getString()
+                );
+                return true;
+            }
+        }
+
+        if (buildingHasOpenRequest(building, colony, BUILDING_REQUEST_CITIZEN_ID, request.getId()))
+        {
+            if (giveStackToBuilding(colony, building, delivery))
             {
                 building.overruleNextOpenRequestWithStack(delivery);
                 BeastofBurdenLog.info(
@@ -187,17 +230,149 @@ public final class ColonyLogistics
                 return true;
             }
         }
+        else if (!citizenOpenRequest && requester.isEmpty())
+        {
+            giveStackToBuilding(colony, building, delivery);
+        }
 
-        request.overrideCurrentDeliveries(ImmutableList.of(delivery));
-        colony.getRequestManager().overruleRequest(request.getId(), delivery);
-        BeastofBurdenLog.info(
-          "Fulfilled request {} via overrule with {} (building={}, citizen={}).",
+        if (overruleRequestDirect(colony, request, delivery))
+        {
+            BeastofBurdenLog.info(
+              "Fulfilled request {} via overrule with {} (building={}, citizen={}).",
+              request.getId(),
+              delivery.getHoverName().getString(),
+              building.getID(),
+              requester.map(ICitizenData::getId).orElse(null)
+            );
+            return true;
+        }
+
+        BeastofBurdenLog.warn(
+          "Failed to fulfill request {} (building={}, citizen={}, citizenOpen={}).",
           request.getId(),
-          delivery.getHoverName().getString(),
           building.getID(),
-          requester.map(ICitizenData::getId).orElse(null)
+          requester.map(ICitizenData::getId).orElse(null),
+          citizenOpenRequest
         );
-        return true;
+        return false;
+    }
+
+    /**
+     * Force-place items at the delivery location and overrule the request after a delivery timeout.
+     *
+     * @return {@code true} when the request was overruled.
+     */
+    public static boolean forceFulfillRequest(
+      @NotNull final IColony colony,
+      @NotNull final IRequest<?> request,
+      @NotNull final ItemStack stack,
+      @Nullable final BlockPos deliveryPos)
+    {
+        if (ItemStackUtils.isEmpty(stack))
+        {
+            return false;
+        }
+
+        final ItemStack delivery = stack.copy();
+        boolean placed = false;
+
+        final Optional<RequestTarget> target = findRequestTargetForDelivery(colony, request);
+        if (target.isPresent())
+        {
+            final IBuilding building = target.get().building();
+            final Optional<ICitizenData> requester = target.get().citizen();
+
+            if (requester.isPresent() && requester.get().getEntity().isPresent())
+            {
+                giveStackToCitizen(requester.get(), delivery);
+                placed = true;
+            }
+            else if (giveStackToBuilding(colony, building, delivery))
+            {
+                placed = true;
+            }
+        }
+
+        if (!placed && colony.getWorld() != null && deliveryPos != null && !deliveryPos.equals(BlockPos.ZERO))
+        {
+            Block.popResource(colony.getWorld(), deliveryPos, delivery.copy());
+            placed = true;
+        }
+
+        if (!placed)
+        {
+            BeastofBurdenLog.warn(
+              "Force delivery could not place {} for request {}; overrule only.",
+              delivery.getHoverName().getString(),
+              request.getId()
+            );
+        }
+
+        return overruleRequestDirect(colony, request, delivery);
+    }
+
+    @NotNull
+    private static Optional<IBuilding> findBuildingFromRequester(@NotNull final IColony colony, @NotNull final IRequest<?> request)
+    {
+        final BlockPos pos = request.getRequester().getLocation().getInDimensionLocation();
+        if (pos == null)
+        {
+            return Optional.empty();
+        }
+
+        final IRegisteredStructureManager manager = MineColoniesCompat.getStructureManager(colony);
+        if (manager == null)
+        {
+            return Optional.empty();
+        }
+
+        return Optional.ofNullable(manager.getBuilding(pos));
+    }
+
+    @NotNull
+    private static Optional<RequestTarget> findRequestTargetFromParentChain(
+      @NotNull final IColony colony,
+      @NotNull final IRequest<?> request)
+    {
+        final IRequestManager manager = colony.getRequestManager();
+        IToken<?> parentToken = request.getParent();
+
+        while (parentToken != null)
+        {
+            final IRequest<?> parent = manager.getRequestForToken(parentToken);
+            if (parent == null)
+            {
+                break;
+            }
+
+            final Optional<RequestTarget> parentTarget = findRequestTargetForDelivery(colony, parent);
+            if (parentTarget.isPresent())
+            {
+                return parentTarget;
+            }
+
+            parentToken = parent.getParent();
+        }
+
+        return Optional.empty();
+    }
+
+    private static boolean overruleRequestDirect(
+      @NotNull final IColony colony,
+      @NotNull final IRequest<?> request,
+      @NotNull final ItemStack delivery)
+    {
+        try
+        {
+            request.overrideCurrentDeliveries(ImmutableList.of(delivery.copy()));
+            colony.getRequestManager().overruleRequest(request.getId(), delivery.copy());
+            return true;
+        }
+        catch (final Exception ex)
+        {
+            BeastofBurdenLog.warn("Direct overrule failed for request {}: {}", request.getId(), ex.toString());
+            return false;
+        }
     }
 
     private static void forEachOpenRequestBucket(
@@ -307,7 +482,7 @@ public final class ColonyLogistics
         if (!ItemStackUtils.isEmpty(remaining))
         {
             BeastofBurdenLog.warn(
-              "Building {} inventory full; {} items left over — delivery aborted.",
+              "Building {} inventory full; {} items left over.",
               building.getID(),
               remaining.getCount()
             );

@@ -40,6 +40,8 @@ public class ItemGenerationTask
     @NotNull
     private ItemStack pendingDeliveryStack = ItemStack.EMPTY;
 
+    private int deliveryInRangeTicks;
+
     public ItemGenerationTask(@NotNull final JobBeastofburden job)
     {
         this.job = job;
@@ -168,6 +170,22 @@ public class ItemGenerationTask
         pendingDeliveryRequest = null;
         pendingDeliveryStack = ItemStack.EMPTY;
         generatedStack = ItemStack.EMPTY;
+        deliveryInRangeTicks = 0;
+    }
+
+    public int getDeliveryInRangeTicks()
+    {
+        return deliveryInRangeTicks;
+    }
+
+    public void incrementDeliveryInRangeTicks()
+    {
+        deliveryInRangeTicks++;
+    }
+
+    public void resetDeliveryInRangeTicks()
+    {
+        deliveryInRangeTicks = 0;
     }
 
     public void cancel()
@@ -188,6 +206,7 @@ public class ItemGenerationTask
         pendingDeliveryStack = ItemStack.EMPTY;
         generatedStack = ItemStack.EMPTY;
         progressTicks = 0;
+        deliveryInRangeTicks = 0;
     }
 
     public boolean isWorking()

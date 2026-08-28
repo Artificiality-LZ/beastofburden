@@ -75,6 +75,7 @@ public class BeastofburdenConfigScreen extends Screen
 
     private EditBox baseTicksBox;
     private EditBox minTicksBox;
+    private EditBox deliveryTimeoutBox;
     private EditBox ticksPerValueBox;
     private EditBox strengthBonusBox;
     private EditBox defaultValueBox;
@@ -201,6 +202,7 @@ public class BeastofburdenConfigScreen extends Screen
         row += GENERAL_ROW_HEIGHT;
 
         logDaysBox = addBox(leftX, row + GENERAL_LABEL_TO_FIELD, colWidth, draft.workLogHistoryDays());
+        deliveryTimeoutBox = addBox(rightX, row + GENERAL_LABEL_TO_FIELD, colWidth, draft.deliveryTimeoutTicks());
         row += GENERAL_ROW_HEIGHT;
 
         deriveRecipesButton = addRenderableWidget(CycleButton.onOffBuilder(draft.deriveFromRecipes())
@@ -502,6 +504,7 @@ public class BeastofburdenConfigScreen extends Screen
         draft = new ConfigSnapshot(
           parseInt(baseTicksBox.getValue(), draft.baseGenerationTicks()),
           parseInt(minTicksBox.getValue(), draft.minGenerationTicks()),
+          parseInt(deliveryTimeoutBox.getValue(), draft.deliveryTimeoutTicks()),
           parseDouble(ticksPerValueBox.getValue(), draft.ticksPerItemValue()),
           parseDouble(strengthBonusBox.getValue(), draft.strengthSpeedBonus()),
           parseInt(defaultValueBox.getValue(), draft.defaultItemValue()),
@@ -532,6 +535,7 @@ public class BeastofburdenConfigScreen extends Screen
         return new ConfigSnapshot(
           draft.baseGenerationTicks(),
           draft.minGenerationTicks(),
+          draft.deliveryTimeoutTicks(),
           draft.ticksPerItemValue(),
           draft.strengthSpeedBonus(),
           draft.defaultItemValue(),
@@ -547,6 +551,7 @@ public class BeastofburdenConfigScreen extends Screen
         return new ConfigSnapshot(
           draft.baseGenerationTicks(),
           draft.minGenerationTicks(),
+          draft.deliveryTimeoutTicks(),
           draft.ticksPerItemValue(),
           draft.strengthSpeedBonus(),
           draft.defaultItemValue(),
@@ -630,6 +635,7 @@ public class BeastofburdenConfigScreen extends Screen
         row += GENERAL_ROW_HEIGHT;
 
         drawFieldLabel(graphics, leftX, row, "com.beastofburden.config.log_days");
+        drawFieldLabel(graphics, rightX, row, "com.beastofburden.config.delivery_timeout");
         graphics.disableScissor();
     }
 

@@ -12,6 +12,7 @@ import com.minecolonies.api.util.constant.CitizenConstants;
 import com.minecolonies.core.entity.ai.workers.AbstractAISkeleton;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
+import org.Artificial.beastofburden.Config;
 import org.Artificial.beastofburden.colony.jobs.JobBeastofburden;
 import org.Artificial.beastofburden.entity.ai.states.BeastofBurdenState;
 import org.Artificial.beastofburden.entity.ai.tasks.ItemGenerationTask;
@@ -294,15 +295,44 @@ public class EntityAIBeastofburden extends AbstractAISkeleton<JobBeastofburden>
         final BlockPos deliveryPos = RequestItemUtils.getDeliveryPosition(colony, request);
         if (!walkTowards(deliveryPos, CitizenConstants.DEFAULT_RANGE_FOR_DELAY))
         {
+            generationTask.resetDeliveryInRangeTicks();
             return BeastofBurdenState.DELIVER_ITEM;
         }
 
-        if (!deliverRequest(colony, request, stack))
+        if (deliverRequest(colony, request, stack))
         {
-            BeastofBurdenLog.warn("Citizen {} failed to deliver {}.", job.getCitizen().getId(), stack.getHoverName().getString());
-            return BeastofBurdenState.DELIVER_ITEM;
+            completeSuccessfulDelivery(colony, request, stack);
+            updateWorkStatus(false);
+            return IDLE;
         }
 
+        generationTask.incrementDeliveryInRangeTicks();
+        if (generationTask.getDeliveryInRangeTicks() >= Config.deliveryTimeoutTicks)
+        {
+            if (ColonyLogistics.forceFulfillRequest(colony, request, stack, deliveryPos))
+            {
+                InventoryUtils.removeStackFromItemHandler(worker.getInventoryCitizen(), stack.copy(), stack.getCount());
+                completeSuccessfulDelivery(colony, request, stack);
+                BeastofBurdenLog.warn(
+                  "Citizen {} force-delivered {} after {} ticks in range.",
+                  job.getCitizen().getId(),
+                  stack.getHoverName().getString(),
+                  generationTask.getDeliveryInRangeTicks()
+                );
+                updateWorkStatus(false);
+                return IDLE;
+            }
+        }
+
+        BeastofBurdenLog.warn("Citizen {} failed to deliver {}.", job.getCitizen().getId(), stack.getHoverName().getString());
+        return BeastofBurdenState.DELIVER_ITEM;
+    }
+
+    private void completeSuccessfulDelivery(
+      @NotNull final IColony colony,
+      @NotNull final IRequest<?> request,
+      @NotNull final ItemStack stack)
+    {
         generationTask.completeDelivery();
 
         final BeastofBurdenRequestQueue queue = ColonyRequestEventHandler.getQueue(colony);
@@ -311,8 +341,6 @@ public class EntityAIBeastofburden extends AbstractAISkeleton<JobBeastofburden>
         BeastWorkSync.onDeliveryComplete(job, stack, generationTask.getLastGenerationDuration());
 
         BeastofBurdenLog.info("Citizen {} delivered {} to request.", job.getCitizen().getId(), stack.getHoverName().getString());
-        updateWorkStatus(false);
-        return IDLE;
     }
 
     private boolean deliverRequest(@NotNull final IColony colony, @NotNull final IRequest<?> request, @NotNull final ItemStack stack)

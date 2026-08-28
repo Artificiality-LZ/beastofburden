@@ -11,6 +11,7 @@ import java.util.Map;
 public record ConfigSnapshot(
   int baseGenerationTicks,
   int minGenerationTicks,
+  int deliveryTimeoutTicks,
   double ticksPerItemValue,
   double strengthSpeedBonus,
   int defaultItemValue,
@@ -25,6 +26,7 @@ public record ConfigSnapshot(
         return new ConfigSnapshot(
           org.Artificial.beastofburden.Config.baseGenerationTicks,
           org.Artificial.beastofburden.Config.minGenerationTicks,
+          org.Artificial.beastofburden.Config.deliveryTimeoutTicks,
           org.Artificial.beastofburden.Config.ticksPerItemValue,
           org.Artificial.beastofburden.Config.strengthSpeedBonus,
           org.Artificial.beastofburden.Config.defaultItemValue,

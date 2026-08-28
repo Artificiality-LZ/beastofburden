@@ -107,6 +107,7 @@
   "com.beastofburden.config.default_value": "Default item value",
   "com.beastofburden.config.log_max": "Max log entries",
   "com.beastofburden.config.log_days": "History days (0 = all)",
+  "com.beastofburden.config.delivery_timeout": "Delivery timeout (ticks)",
   "com.beastofburden.config.derive_recipes": "Derive from recipes",
   "com.beastofburden.command.planning_instant_build.enabled": "Planning instant build enabled.",
   "com.beastofburden.command.planning_instant_build.disabled": "Planning instant build disabled.",

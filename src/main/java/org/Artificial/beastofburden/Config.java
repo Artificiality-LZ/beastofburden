@@ -33,6 +33,10 @@ public class Config
             .comment("Minimum generation time in ticks regardless of item value or skill.")
             .defineInRange("minGenerationTicks", 40, 1, 20_000);
 
+    private static final ForgeConfigSpec.IntValue DELIVERY_TIMEOUT_TICKS = BUILDER
+            .comment("Ticks in delivery range before force-placing items and overruling the request.")
+            .defineInRange("deliveryTimeoutTicks", 200, 20, 72_000);
+
     private static final ForgeConfigSpec.DoubleValue TICKS_PER_ITEM_VALUE = BUILDER
             .comment("Extra ticks added per point of total item value (value x stack count).")
             .defineInRange("ticksPerItemValue", 3.0, 0.0, 10_000.0);
@@ -104,6 +108,7 @@ public class Config
     public static boolean debugLogging;
     public static int baseGenerationTicks;
     public static int minGenerationTicks;
+    public static int deliveryTimeoutTicks;
     public static double ticksPerItemValue;
     public static double strengthSpeedBonus;
     public static int defaultItemValue;
@@ -214,6 +219,7 @@ public class Config
         debugLogging = DEBUG_LOGGING.get();
         baseGenerationTicks = BASE_GENERATION_TICKS.get();
         minGenerationTicks = MIN_GENERATION_TICKS.get();
+        deliveryTimeoutTicks = DELIVERY_TIMEOUT_TICKS.get();
         ticksPerItemValue = TICKS_PER_ITEM_VALUE.get();
         strengthSpeedBonus = STRENGTH_SPEED_BONUS.get();
         defaultItemValue = DEFAULT_ITEM_VALUE.get();
@@ -258,6 +264,7 @@ public class Config
     public static void applyRuntimeValues(
       final int baseTicks,
       final int minTicks,
+      final int deliveryTimeout,
       final double ticksPerValue,
       final double strengthBonus,
       final int defaultValue,
@@ -268,6 +275,7 @@ public class Config
     {
         BASE_GENERATION_TICKS.set(baseTicks);
         MIN_GENERATION_TICKS.set(minTicks);
+        DELIVERY_TIMEOUT_TICKS.set(deliveryTimeout);
         TICKS_PER_ITEM_VALUE.set(ticksPerValue);
         STRENGTH_SPEED_BONUS.set(strengthBonus);
         DEFAULT_ITEM_VALUE.set(defaultValue);
@@ -284,6 +292,7 @@ public class Config
 
         baseGenerationTicks = baseTicks;
         minGenerationTicks = minTicks;
+        deliveryTimeoutTicks = deliveryTimeout;
         ticksPerItemValue = ticksPerValue;
         strengthSpeedBonus = strengthBonus;
         defaultItemValue = defaultValue;

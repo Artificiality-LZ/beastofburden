@@ -136,7 +136,7 @@ public final class RequestItemUtils
     @NotNull
     public static BlockPos getDeliveryPosition(@NotNull final IColony colony, @NotNull final IRequest<?> request)
     {
-        final Optional<ColonyLogistics.RequestTarget> target = ColonyLogistics.findRequestTarget(colony, request.getId());
+        final Optional<ColonyLogistics.RequestTarget> target = ColonyLogistics.findRequestTargetForDelivery(colony, request);
         if (target.isPresent())
         {
             final Optional<ICitizenData> requester = target.get().citizen();

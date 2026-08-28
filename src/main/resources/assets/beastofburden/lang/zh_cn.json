@@ -107,6 +107,7 @@
   "com.beastofburden.config.default_value": "默认物品价值",
   "com.beastofburden.config.log_max": "最大记录条数",
   "com.beastofburden.config.log_days": "显示天数（0=全部）",
+  "com.beastofburden.config.delivery_timeout": "送达超时（tick）",
   "com.beastofburden.config.derive_recipes": "配方推导价值",
   "com.beastofburden.command.planning_instant_build.enabled": "规划瞬间建造已开启。",
   "com.beastofburden.command.planning_instant_build.disabled": "规划瞬间建造已关闭。",
