@@ -8,6 +8,7 @@ import com.minecolonies.api.colony.buildings.workerbuildings.ITownHall;
 import com.minecolonies.api.colony.managers.interfaces.IRegisteredStructureManager;
 import com.minecolonies.api.entity.ai.statemachine.AITarget;
 import com.minecolonies.api.entity.ai.statemachine.states.IState;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -17,6 +18,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.Map;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
@@ -45,6 +47,9 @@ public final class MineColoniesCompat
 
     @Nullable
     private static final MethodHandle TOWN_HALL_GETTER = resolveTownHallGetter();
+
+    @Nullable
+    private static final MethodHandle BUILDING_AT_GETTER = resolveBuildingAtGetter();
 
     @Nullable
     private static final MethodHandle BUILDING_BLOCK_GETTER = resolveBuildingBlockGetter();
@@ -115,6 +120,50 @@ public final class MineColoniesCompat
         catch (final Throwable ex)
         {
             BeastofBurdenLog.warn("Failed to resolve town hall from structure manager: {}", ex.toString());
+            return null;
+        }
+    }
+
+    /**
+     * Resolves a building at a colony position from the structure manager.
+     * <p>
+     * On 873 {@code getBuilding(BlockPos)} returns {@link IBuilding}; on 1197+ it becomes a generic
+     * default on {@code ICommonRegisteredStructureManager}. Bytecode linking the 873 descriptor
+     * crashes with {@link NoSuchMethodError}. Prefer {@code getBuildings().get(pos)}.
+     */
+    @Nullable
+    public static IBuilding getBuildingAt(@NotNull final IRegisteredStructureManager manager, @NotNull final BlockPos pos)
+    {
+        try
+        {
+            final Map<BlockPos, IBuilding> buildings = manager.getBuildings();
+            if (buildings != null)
+            {
+                final IBuilding building = buildings.get(pos);
+                if (building != null)
+                {
+                    return building;
+                }
+            }
+        }
+        catch (final Throwable ex)
+        {
+            BeastofBurdenLog.warn("Failed to resolve building at {} via getBuildings(): {}", pos, ex.toString());
+        }
+
+        if (BUILDING_AT_GETTER == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            final Object building = BUILDING_AT_GETTER.invoke(manager, pos);
+            return building instanceof IBuilding resolved ? resolved : null;
+        }
+        catch (final Throwable ex)
+        {
+            BeastofBurdenLog.warn("Failed to resolve building at {} via getBuilding(): {}", pos, ex.toString());
             return null;
         }
     }
@@ -297,6 +346,16 @@ public final class MineColoniesCompat
             BeastofBurdenLog.warn("IRegisteredStructureManager.getTownHall is not resolvable; town-hall lookup disabled.");
         }
         return fromHierarchy;
+    }
+
+    @Nullable
+    private static MethodHandle resolveBuildingAtGetter()
+    {
+        return findVirtual(
+          IRegisteredStructureManager.class,
+          "getBuilding",
+          MethodType.methodType(IBuilding.class, BlockPos.class)
+        );
     }
 
     @Nullable

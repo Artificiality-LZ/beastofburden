@@ -81,7 +81,7 @@ public final class ColonyLogistics
 
     public static boolean isOpenOnAnyBuilding(@NotNull final IColony colony, @NotNull final IRequest<?> request)
     {
-        return findRequestTargetForDelivery(colony, request).isPresent();
+        return findRequestTarget(colony, request.getId()).isPresent();
     }
 
     /**
@@ -326,7 +326,7 @@ public final class ColonyLogistics
             return Optional.empty();
         }
 
-        return Optional.ofNullable(manager.getBuilding(pos));
+        return Optional.ofNullable(MineColoniesCompat.getBuildingAt(manager, pos));
     }
 
     @NotNull
