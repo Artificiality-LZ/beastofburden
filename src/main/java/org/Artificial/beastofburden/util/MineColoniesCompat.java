@@ -16,6 +16,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
@@ -59,6 +60,8 @@ public final class MineColoniesCompat
 
     @Nullable
     private static final MethodHandle AI_TARGET_THREE_ARG = resolveAiTargetThreeArg();
+
+    private static final boolean AI_TARGET_USES_CUSTOM_SAM = resolveAiTargetUsesCustomSam();
 
     private MineColoniesCompat()
     {
@@ -186,9 +189,9 @@ public final class MineColoniesCompat
      * Builds an {@link AITarget} with a predicate and next-state supplier.
      * <p>
      * On 873 the constructor takes {@link BooleanSupplier}/{@link Supplier}; on 1197+ it takes
-     * MineColonies SAM types with the same shapes. Callers pass method references or lambdas;
-     * this method selects the constructor at runtime and passes them through unchanged (same as
-     * {@code AbstractEntityAIBasic} on 1214+).
+     * MineColonies SAM types with the same shapes. Callers pass JDK functional types compiled
+     * against 873; on 1197+ this method wraps them in {@link Proxy} adapters for the MC API
+     * interfaces so bytecode never links the version-specific constructor descriptors.
      */
     @NotNull
     public static <S extends IState> AITarget<S> aiTarget(
@@ -204,8 +207,10 @@ public final class MineColoniesCompat
 
         try
         {
+            final Object predicateArg = adaptBooleanSupplier(predicate);
+            final Object actionArg = adaptStateSupplier(action);
             @SuppressWarnings("unchecked")
-            final AITarget<S> target = (AITarget<S>) AI_TARGET_FOUR_ARG.invoke(state, predicate, action, tickRate);
+            final AITarget<S> target = (AITarget<S>) AI_TARGET_FOUR_ARG.invoke(state, predicateArg, actionArg, tickRate);
             return target;
         }
         catch (final Throwable ex)
@@ -228,8 +233,9 @@ public final class MineColoniesCompat
         {
             try
             {
+                final Object actionArg = adaptStateSupplier(action);
                 @SuppressWarnings("unchecked")
-                final AITarget<S> target = (AITarget<S>) AI_TARGET_THREE_ARG.invoke(state, action, tickRate);
+                final AITarget<S> target = (AITarget<S>) AI_TARGET_THREE_ARG.invoke(state, actionArg, tickRate);
                 return target;
             }
             catch (final Throwable ex)
@@ -429,6 +435,99 @@ public final class MineColoniesCompat
           AITarget.class,
           MethodType.methodType(void.class, IState.class, actionType, int.class)
         );
+    }
+
+    private static boolean resolveAiTargetUsesCustomSam()
+    {
+        if (AI_TARGET_FOUR_ARG == null)
+        {
+            return false;
+        }
+
+        return !BooleanSupplier.class.equals(AI_TARGET_FOUR_ARG.type().parameterType(1));
+    }
+
+    @NotNull
+    private static Object adaptBooleanSupplier(@NotNull final BooleanSupplier predicate)
+    {
+        if (!AI_TARGET_USES_CUSTOM_SAM)
+        {
+            return predicate;
+        }
+
+        return proxyBooleanSupplier(predicate);
+    }
+
+    @NotNull
+    private static Object adaptStateSupplier(@NotNull final Supplier<?> action)
+    {
+        if (!AI_TARGET_USES_CUSTOM_SAM)
+        {
+            return action;
+        }
+
+        return proxyStateSupplier(action);
+    }
+
+    @NotNull
+    private static Object proxyBooleanSupplier(@NotNull final BooleanSupplier predicate)
+    {
+        final Class<?> samType = loadClass(I_BOOLEAN_CONDITION_SUPPLIER);
+        if (samType == null)
+        {
+            return predicate;
+        }
+
+        return Proxy.newProxyInstance(
+          samType.getClassLoader(),
+          new Class<?>[] {samType},
+          (proxy, method, args) ->
+          {
+              if ("getAsBoolean".equals(method.getName()) && method.getParameterCount() == 0)
+              {
+                  return predicate.getAsBoolean();
+              }
+              return handleProxyObjectMethod(proxy, method, args);
+          }
+        );
+    }
+
+    @NotNull
+    private static Object proxyStateSupplier(@NotNull final Supplier<?> action)
+    {
+        final Class<?> samType = loadClass(I_STATE_SUPPLIER);
+        if (samType == null)
+        {
+            return action;
+        }
+
+        return Proxy.newProxyInstance(
+          samType.getClassLoader(),
+          new Class<?>[] {samType},
+          (proxy, method, args) ->
+          {
+              if ("get".equals(method.getName()) && method.getParameterCount() == 0)
+              {
+                  return action.get();
+              }
+              return handleProxyObjectMethod(proxy, method, args);
+          }
+        );
+    }
+
+    @Nullable
+    private static Object handleProxyObjectMethod(
+      @NotNull final Object proxy,
+      @NotNull final Method method,
+      @Nullable final Object[] args)
+    {
+        return switch (method.getName())
+        {
+            case "equals" -> Boolean.valueOf(args != null && args.length == 1 && proxy == args[0]);
+            case "hashCode" -> Integer.valueOf(System.identityHashCode(proxy));
+            case "toString" -> "MineColoniesCompatSamAdapter@" + Integer.toHexString(System.identityHashCode(proxy));
+            default -> throw new UnsupportedOperationException(method.toString());
+        };
     }
 
     @Nullable
