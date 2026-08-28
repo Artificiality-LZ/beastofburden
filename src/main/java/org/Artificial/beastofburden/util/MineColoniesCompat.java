@@ -1,5 +1,6 @@
 package org.Artificial.beastofburden.util;
 
+import com.ldtteam.structurize.blueprints.v1.Blueprint;
 import com.minecolonies.api.colony.IColony;
 import com.minecolonies.api.colony.buildings.IBuilding;
 import com.minecolonies.api.colony.buildings.registry.BuildingEntry;
@@ -11,13 +12,10 @@ import net.minecraft.world.level.block.Block;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.invoke.CallSite;
-import java.lang.invoke.LambdaMetafactory;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
@@ -28,7 +26,8 @@ import java.util.function.Supplier;
  * (e.g. {@code IColony.getBuildingManager()} or {@code IRegisteredStructureManager.getTownHall()}
  * with an {@code ITownHall} return) or the JVM throws {@link NoSuchMethodError} on 1.1.1214+.
  * The same applies to {@link AITarget} constructors that swapped JDK functional types for
- * MineColonies SAM interfaces on 1.1.1197+, and to {@link BuildingEntry#getBuildingBlock()} whose
+ * MineColonies SAM interfaces on 1.1.1197+, to {@link IBuilding#onUpgradeComplete} which gained
+ * a {@link Blueprint} parameter on 1214+, and to {@link BuildingEntry#getBuildingBlock()} whose
  * return type changed from {@code AbstractBlockHut} to {@code AbstractColonyBlock}.
  */
 public final class MineColoniesCompat
@@ -50,18 +49,16 @@ public final class MineColoniesCompat
     private static final MethodHandle BUILDING_BLOCK_GETTER = resolveBuildingBlockGetter();
 
     @Nullable
+    private static final MethodHandle ON_UPGRADE_COMPLETE_LEGACY = resolveOnUpgradeCompleteLegacy();
+
+    @Nullable
+    private static final MethodHandle ON_UPGRADE_COMPLETE_WITH_BLUEPRINT = resolveOnUpgradeCompleteWithBlueprint();
+
+    @Nullable
     private static final MethodHandle AI_TARGET_FOUR_ARG = resolveAiTargetFourArg();
 
     @Nullable
     private static final MethodHandle AI_TARGET_THREE_ARG = resolveAiTargetThreeArg();
-
-    private static final boolean AI_TARGET_USES_CUSTOM_SAM = resolveAiTargetUsesCustomSam();
-
-    @Nullable
-    private static final MethodHandle BOOLEAN_SAM_FACTORY = resolveBooleanSamFactory();
-
-    @Nullable
-    private static final MethodHandle STATE_SAM_FACTORY = resolveStateSamFactory();
 
     private MineColoniesCompat()
     {
@@ -146,11 +143,52 @@ public final class MineColoniesCompat
     }
 
     /**
+     * Notifies a building that an upgrade has completed.
+     * <p>
+     * On 873 the API is {@code onUpgradeComplete(int)}; on 1214+ it is
+     * {@code onUpgradeComplete(Blueprint, int)} as used by {@code SurvivalHandler}.
+     */
+    public static void onUpgradeComplete(
+      @NotNull final IBuilding building,
+      @Nullable final Blueprint blueprint,
+      final int newLevel)
+    {
+        if (ON_UPGRADE_COMPLETE_WITH_BLUEPRINT != null)
+        {
+            try
+            {
+                ON_UPGRADE_COMPLETE_WITH_BLUEPRINT.invoke(building, blueprint, newLevel);
+                return;
+            }
+            catch (final Throwable ex)
+            {
+                throw new IllegalStateException("Failed to invoke IBuilding.onUpgradeComplete(Blueprint, int).", ex);
+            }
+        }
+
+        if (ON_UPGRADE_COMPLETE_LEGACY != null)
+        {
+            try
+            {
+                ON_UPGRADE_COMPLETE_LEGACY.invoke(building, newLevel);
+                return;
+            }
+            catch (final Throwable ex)
+            {
+                throw new IllegalStateException("Failed to invoke IBuilding.onUpgradeComplete(int).", ex);
+            }
+        }
+
+        throw new IllegalStateException("No compatible IBuilding.onUpgradeComplete method found.");
+    }
+
+    /**
      * Builds an {@link AITarget} with a predicate and next-state supplier.
      * <p>
      * On 873 the constructor takes {@link BooleanSupplier}/{@link Supplier}; on 1197+ it takes
-     * MineColonies SAM types with the same shapes. Callers pass JDK functional types; this method
-     * adapts at runtime so bytecode never links the version-specific descriptors.
+     * MineColonies SAM types with the same shapes. Callers pass method references or lambdas;
+     * this method selects the constructor at runtime and passes them through unchanged (same as
+     * {@code AbstractEntityAIBasic} on 1214+).
      */
     @NotNull
     public static <S extends IState> AITarget<S> aiTarget(
@@ -166,10 +204,8 @@ public final class MineColoniesCompat
 
         try
         {
-            final Object predicateArg = adaptBooleanSupplier(predicate);
-            final Object actionArg = adaptStateSupplier(action);
             @SuppressWarnings("unchecked")
-            final AITarget<S> target = (AITarget<S>) AI_TARGET_FOUR_ARG.invoke(state, predicateArg, actionArg, tickRate);
+            final AITarget<S> target = (AITarget<S>) AI_TARGET_FOUR_ARG.invoke(state, predicate, action, tickRate);
             return target;
         }
         catch (final Throwable ex)
@@ -192,9 +228,8 @@ public final class MineColoniesCompat
         {
             try
             {
-                final Object actionArg = adaptStateSupplier(action);
                 @SuppressWarnings("unchecked")
-                final AITarget<S> target = (AITarget<S>) AI_TARGET_THREE_ARG.invoke(state, actionArg, tickRate);
+                final AITarget<S> target = (AITarget<S>) AI_TARGET_THREE_ARG.invoke(state, action, tickRate);
                 return target;
             }
             catch (final Throwable ex)
@@ -265,6 +300,38 @@ public final class MineColoniesCompat
         if (handle == null)
         {
             BeastofBurdenLog.warn("BuildingEntry.getBuildingBlock is not resolvable; hut block lookup disabled.");
+        }
+        return handle;
+    }
+
+    @Nullable
+    private static MethodHandle resolveOnUpgradeCompleteLegacy()
+    {
+        return findVirtual(
+          IBuilding.class,
+          "onUpgradeComplete",
+          MethodType.methodType(void.class, int.class)
+        );
+    }
+
+    @Nullable
+    private static MethodHandle resolveOnUpgradeCompleteWithBlueprint()
+    {
+        final MethodHandle handle = findVirtual(
+          IBuilding.class,
+          "onUpgradeComplete",
+          MethodType.methodType(void.class, Blueprint.class, int.class)
+        );
+        if (handle == null)
+        {
+            return null;
+        }
+
+        if (ON_UPGRADE_COMPLETE_LEGACY != null)
+        {
+            BeastofBurdenLog.warn(
+              "Both IBuilding.onUpgradeComplete(int) and onUpgradeComplete(Blueprint, int) are present; using Blueprint variant."
+            );
         }
         return handle;
     }
@@ -362,200 +429,6 @@ public final class MineColoniesCompat
           AITarget.class,
           MethodType.methodType(void.class, IState.class, actionType, int.class)
         );
-    }
-
-    private static boolean resolveAiTargetUsesCustomSam()
-    {
-        if (AI_TARGET_FOUR_ARG == null)
-        {
-            return false;
-        }
-
-        // findConstructor type is (IState, predicate, action, int)AITarget
-        return !BooleanSupplier.class.equals(AI_TARGET_FOUR_ARG.type().parameterType(1));
-    }
-
-    @Nullable
-    private static MethodHandle resolveBooleanSamFactory()
-    {
-        if (!AI_TARGET_USES_CUSTOM_SAM)
-        {
-            return null;
-        }
-
-        final Class<?> samType = loadClass(I_BOOLEAN_CONDITION_SUPPLIER);
-        if (samType == null)
-        {
-            return null;
-        }
-
-        try
-        {
-            final MethodHandle target = LOOKUP.findVirtual(
-              BooleanSupplier.class,
-              "getAsBoolean",
-              MethodType.methodType(boolean.class)
-            );
-            final CallSite site = LambdaMetafactory.metafactory(
-              LOOKUP,
-              "getAsBoolean",
-              MethodType.methodType(samType, BooleanSupplier.class),
-              MethodType.methodType(boolean.class),
-              target,
-              MethodType.methodType(boolean.class)
-            );
-            return site.getTarget();
-        }
-        catch (final Throwable ex)
-        {
-            BeastofBurdenLog.warn("LambdaMetafactory for IBooleanConditionSupplier failed; falling back to Proxy: {}", ex.toString());
-            return null;
-        }
-    }
-
-    @Nullable
-    private static MethodHandle resolveStateSamFactory()
-    {
-        if (!AI_TARGET_USES_CUSTOM_SAM)
-        {
-            return null;
-        }
-
-        final Class<?> samType = loadClass(I_STATE_SUPPLIER);
-        if (samType == null)
-        {
-            return null;
-        }
-
-        try
-        {
-            final MethodHandle target = LOOKUP.findVirtual(
-              Supplier.class,
-              "get",
-              MethodType.methodType(Object.class)
-            );
-            final CallSite site = LambdaMetafactory.metafactory(
-              LOOKUP,
-              "get",
-              MethodType.methodType(samType, Supplier.class),
-              MethodType.methodType(Object.class),
-              target,
-              MethodType.methodType(Object.class)
-            );
-            return site.getTarget();
-        }
-        catch (final Throwable ex)
-        {
-            BeastofBurdenLog.warn("LambdaMetafactory for IStateSupplier failed; falling back to Proxy: {}", ex.toString());
-            return null;
-        }
-    }
-
-    @NotNull
-    private static Object adaptBooleanSupplier(@NotNull final BooleanSupplier predicate)
-    {
-        if (!AI_TARGET_USES_CUSTOM_SAM)
-        {
-            return predicate;
-        }
-
-        if (BOOLEAN_SAM_FACTORY != null)
-        {
-            try
-            {
-                return BOOLEAN_SAM_FACTORY.invoke(predicate);
-            }
-            catch (final Throwable ex)
-            {
-                BeastofBurdenLog.warn("Failed to adapt BooleanSupplier via LambdaMetafactory: {}", ex.toString());
-            }
-        }
-
-        return proxyBooleanSupplier(predicate);
-    }
-
-    @NotNull
-    private static Object adaptStateSupplier(@NotNull final Supplier<?> action)
-    {
-        if (!AI_TARGET_USES_CUSTOM_SAM)
-        {
-            return action;
-        }
-
-        if (STATE_SAM_FACTORY != null)
-        {
-            try
-            {
-                return STATE_SAM_FACTORY.invoke(action);
-            }
-            catch (final Throwable ex)
-            {
-                BeastofBurdenLog.warn("Failed to adapt Supplier via LambdaMetafactory: {}", ex.toString());
-            }
-        }
-
-        return proxyStateSupplier(action);
-    }
-
-    @NotNull
-    private static Object proxyBooleanSupplier(@NotNull final BooleanSupplier predicate)
-    {
-        final Class<?> samType = loadClass(I_BOOLEAN_CONDITION_SUPPLIER);
-        if (samType == null)
-        {
-            return predicate;
-        }
-
-        return Proxy.newProxyInstance(
-          samType.getClassLoader(),
-          new Class<?>[] {samType},
-          (proxy, method, args) ->
-          {
-              if ("getAsBoolean".equals(method.getName()) && method.getParameterCount() == 0)
-              {
-                  return predicate.getAsBoolean();
-              }
-              return handleProxyObjectMethod(proxy, method, args);
-          }
-        );
-    }
-
-    @NotNull
-    private static Object proxyStateSupplier(@NotNull final Supplier<?> action)
-    {
-        final Class<?> samType = loadClass(I_STATE_SUPPLIER);
-        if (samType == null)
-        {
-            return action;
-        }
-
-        return Proxy.newProxyInstance(
-          samType.getClassLoader(),
-          new Class<?>[] {samType},
-          (proxy, method, args) ->
-          {
-              if ("get".equals(method.getName()) && method.getParameterCount() == 0)
-              {
-                  return action.get();
-              }
-              return handleProxyObjectMethod(proxy, method, args);
-          }
-        );
-    }
-
-    @Nullable
-    private static Object handleProxyObjectMethod(
-      @NotNull final Object proxy,
-      @NotNull final Method method,
-      @Nullable final Object[] args)
-    {
-        return switch (method.getName())
-        {
-            case "equals" -> Boolean.valueOf(args != null && args.length == 1 && proxy == args[0]);
-            case "hashCode" -> Integer.valueOf(System.identityHashCode(proxy));
-            case "toString" -> "MineColoniesCompatSamAdapter@" + Integer.toHexString(System.identityHashCode(proxy));
-            default -> throw new UnsupportedOperationException(method.toString());
-        };
     }
 
     @Nullable

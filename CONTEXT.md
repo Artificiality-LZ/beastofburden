@@ -78,6 +78,19 @@
 
 任务完成且编译通过后 **直接 commit，不必再问**。不要 push，除非用户明确要求。提交日志使用中文。
 
+## MineColonies 兼容性调查
+
+处理 873 vs 1214+ 兼容性问题时，按以下顺序调查，**不要**默认用 `javap` / 反编译 jar：
+
+1. **先读本地只读源码树**（见上文「模拟殖民地源码」路径）：
+   - `minecolonies-1.20.1-1.1.873/` — 与本模组 Gradle 编译目标一致
+   - `minecolonies-1.20.1-1.1.1214/` — 较新 1.20.1 对照
+2. **优先查 `com.minecolonies.api`** 对外接口；`com.minecolonies.core` 仅作「MC 自身如何调用该 API」的参照（如 `SurvivalHandler`、`AbstractEntityAIBasic`）
+3. 用 873 / 1214 源码 **diff** 确认签名差异，再在 [`MineColoniesCompat`](src/main/java/org/Artificial/beastofburden/util/MineColoniesCompat.java) 用 `MethodHandles` 桥接
+4. **禁止**在业务代码字节码直链会变签名的 API；jar 反编译仅在源码树缺失时作最后手段
+
+详细破坏性改名表与挂钩清单见 [`文档/技术/模拟殖民地挂钩.md`](文档/技术/模拟殖民地挂钩.md)。
+
 ## 硬性约束
 
 - 包名保持 `org.Artificial.beastofburden`（`Artificial` 的 A 大写）

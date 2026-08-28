@@ -20,6 +20,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import org.Artificial.beastofburden.util.BeastofBurdenLog;
+import org.Artificial.beastofburden.util.MineColoniesCompat;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
@@ -71,7 +72,7 @@ public final class PlanningInstantBuild
             building.getTileEntity().setColony(colony);
         }
 
-        building.onUpgradeComplete(targetLevel);
+        MineColoniesCompat.onUpgradeComplete(building, blueprint, targetLevel);
         building.calculateCorners();
         colony.markDirty();
         return true;
